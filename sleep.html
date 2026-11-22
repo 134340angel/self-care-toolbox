@@ -198,8 +198,11 @@ button:disabled { opacity: .5; cursor: default; }
 .trio { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; }
 input[type="date"], input[type="time"], textarea { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 7px 9px; width: 100%; font-family: var(--font-mono); }
 textarea { font-family: var(--font-body); min-height: 70px; resize: vertical; }
-input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; display: block; box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 44px; line-height: 24px; padding: 9px 10px; text-align: center; }
-input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value { text-align: center; margin: 0; min-height: 24px; line-height: 24px; }
+input[type="date"], input[type="time"] { display: block; box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 40px; }
+@media (pointer: coarse) {
+  input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; min-height: 44px; line-height: 24px; padding: 9px 10px; text-align: center; }
+  input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value { text-align: center; margin: 0; min-height: 24px; line-height: 24px; }
+}
 .trio .field { min-width: 0; }
 .durline { font-size: 13px; color: var(--muted); }
 .durline b { color: var(--ink); font-family: var(--font-mono); font-weight: 500; }
