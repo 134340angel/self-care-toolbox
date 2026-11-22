@@ -208,6 +208,8 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 .toggle { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
 .toggle input { width: 16px; height: 16px; accent-color: var(--line); }
 @media (max-width: 480px) { .trio { grid-template-columns: 1fr 1fr; } .trio .field:first-child { grid-column: 1 / -1; } .nav .lbl { min-width: 110px; } }
+.home { justify-self: start; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: -8px; padding: 4px 0; }
+.home:hover { color: var(--line); }
 /* phone layout */
 .wrap { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 600px) {
@@ -254,6 +256,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 </head>
 <body>
 <div class="wrap">
+  <a class="home" href="./">‹ Self-care Toolbox</a>
   <header>
     <h1>睡眠时间轴<small id="storeStatus" class="status">正在连接…</small></h1>
     <div class="tools">
