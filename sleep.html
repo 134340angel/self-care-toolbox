@@ -256,19 +256,72 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
   .overlay { padding: 16px 10px; }
   input[type="date"], input[type="time"], textarea { font-size: 16px; }
 }
+/* ===== quiet layout (方案二) ===== */
+.wrap { gap: 8px; padding-bottom: 170px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.topbar { display: flex; align-items: center; justify-content: space-between; }
+.home { margin: 0; font-size: 13px; }
+.iconbtn { width: 44px; height: 44px; border: 0; background: transparent; border-radius: 22px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.iconbtn:hover { box-shadow: none; background: var(--hover); }
+.nav { justify-content: center; gap: 10px; width: 100%; }
+.nav .lbl { font-family: var(--font-hand); font-size: 36px; font-weight: 700; line-height: 1.15; min-width: 0; flex: none; text-align: center; }
+.toolbar { justify-content: center; gap: 6px 22px; margin: 0 0 10px; }
+.tabs { border: 0; background: transparent; padding: 0; gap: 22px; width: auto; }
+.tabs button { padding: 4px 2px; border-radius: 0; color: var(--muted); font-size: 15px; flex: none; border-bottom: 2px solid transparent; }
+.tabs button:hover { background: transparent; color: var(--ink); }
+.tabs button[aria-selected="true"] { background: transparent; color: var(--ink); border-bottom-color: var(--line); }
+#todayBtn { border: 0; padding: 4px 2px; font-size: 13px; color: var(--muted); }
+#todayBtn:hover { box-shadow: none; color: var(--ink); text-decoration: underline; }
+.stats { display: none !important; }
+.main { display: grid; gap: 10px; }
+.howto summary { cursor: pointer; font-size: 12.5px; color: var(--muted); list-style: none; display: inline-flex; gap: 6px; align-items: center; padding: 6px 0; }
+.howto summary::-webkit-details-marker { display: none; }
+.howto .note { margin: 2px 0 6px; }
+.avgline { display: none; }
+.rows .seg .lb { display: none; }
+.daytrack .seg .lb { display: none; }
+.rows .side .pips { display: none; }
+.axis .sidehead { visibility: hidden; }
+/* bottom bar */
+.bottombar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--paper); border-top: 1px solid var(--rule); padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); display: grid; gap: 10px; justify-items: center; }
+.bottombar .summary { font-size: 13.5px; color: var(--muted); text-align: center; line-height: 1.6; }
+.bottombar .summary b { color: var(--ink); font-weight: 600; }
+.bottombar .big { width: min(520px, 100%); height: 50px; border-radius: 14px; font-size: 16px; }
+/* day view */
+.dayhead { display: none; }
+.daybig { display: grid; justify-items: center; gap: 4px; margin: 2px 0 12px; font-family: var(--font-hand); font-size: 52px; font-weight: 700; line-height: 1; }
+.daybig small { font-family: var(--font-body); font-size: 13.5px; font-weight: 400; color: var(--muted); }
+.recs { gap: 0; margin-top: 10px; }
+.rec { border: 0; border-top: 1px solid var(--rule); border-radius: 0; padding: 14px 2px; }
+.rec:hover { box-shadow: none; background: var(--hover); }
+/* "更多" sheet */
+.sheet-overlay { align-items: flex-end; padding: 0; }
+.sheet { background: var(--card); color: var(--ink); width: min(640px, 100%); max-height: 88vh; overflow-y: auto; border-radius: 20px 20px 0 0; padding: 6px 20px calc(24px + env(safe-area-inset-bottom)); display: grid; gap: 0; box-shadow: 0 -10px 40px rgba(0,0,0,.18); }
+.grab { justify-self: center; width: 40px; height: 5px; border-radius: 3px; background: var(--rule); margin: 6px 0 10px; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; }
+.sheet-head h2 { margin: 0; font-size: 18px; }
+.sheet .status { margin: 2px 0 10px; }
+.sheet .card { border: 0; border-top: 1px solid var(--rule); border-radius: 0; padding: 16px 0; background: transparent; }
+.rowbtn { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 52px; border: 0; border-top: 1px solid var(--rule); border-radius: 0; background: transparent; padding: 0 2px; font-size: 15px; text-decoration: none; color: var(--ink); }
+.rowbtn:hover { box-shadow: none; background: var(--hover); }
+.rowbtn .dots { display: flex; gap: 5px; }
+.rowbtn .dots i { width: 14px; height: 14px; border-radius: 7px; display: block; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <a class="home" href="./">‹ Self-care Toolbox</a>
-  <header>
-    <h1>睡眠时间轴<small id="storeStatus" class="status">正在连接…</small></h1>
-    <div class="tools">
-      <button id="colorBtn">线条颜色</button>
-      <button class="primary" id="addBtn">＋ 记录睡眠</button>
-    </div>
-  </header>
+  <div class="topbar">
+    <a class="home" href="./">‹ 工具箱</a>
+    <h1 class="sr">睡眠时间轴</h1>
+    <button class="iconbtn" id="moreBtn" aria-label="更多" aria-haspopup="dialog"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+  </div>
+
+  <div class="nav">
+    <button class="iconbtn" id="prevBtn" aria-label="上一个"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span class="lbl" id="rangeLabel"></span>
+    <button class="iconbtn" id="nextBtn" aria-label="下一个"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+  </div>
 
   <div class="toolbar">
     <div class="tabs" role="tablist" aria-label="视图">
@@ -277,44 +330,61 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
       <button role="tab" data-view="month">月</button>
       <button role="tab" data-view="year">年</button>
     </div>
-    <div class="nav">
-      <button id="prevBtn" aria-label="上一个">‹</button>
-      <span class="lbl" id="rangeLabel"></span>
-      <button id="nextBtn" aria-label="下一个">›</button>
-      <button class="ghost" id="todayBtn">今天</button>
-    </div>
+    <button class="ghost" id="todayBtn">回到今天</button>
   </div>
 
   <section class="stats" id="stats" aria-label="统计"></section>
 
-  <section class="card">
-    <h2><span id="mainTitle">时间轴</span><span class="note" id="mainHint"></span></h2>
+  <section class="main" aria-labelledby="mainTitle">
+    <span class="sr" id="mainTitle">时间轴</span>
     <div id="main"></div>
-    <div class="legend" id="legend"></div>
+    <details class="howto">
+      <summary><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>怎么看这张图</summary>
+      <p class="note" id="mainHint"></p>
+      <div class="legend" id="legend"></div>
+    </details>
   </section>
+</div>
 
-  <section class="card" id="aiCard">
-    <h2><span>AI 睡眠总结 · <span id="aiRange"></span></span>
-      <button class="primary" id="aiBtn">生成总结</button></h2>
-    <div id="aiOut" class="ai-out"></div>
-    <div id="aiMeta" class="ai-meta"></div>
-  </section>
+<div class="bottombar">
+  <div class="summary" id="summary"></div>
+  <button class="primary big" id="addBtn">＋ 记录睡眠</button>
+</div>
 
-  <section class="card io">
-    <h2><span>备份数据</span>
-      <span style="display:flex;gap:8px"><button id="expBtn">复制全部数据</button><button id="impToggle">粘贴导入</button></span></h2>
-    <div id="impBox" class="hidden field">
-      <label for="impText">把之前复制的数据粘贴到这里（同一条记录会被覆盖）</label>
-      <textarea id="impText" spellcheck="false"></textarea>
-      <div class="actions"><span id="impMsg" class="err"></span><button class="primary" id="impBtn">导入</button></div>
-    </div>
-    <div class="note" id="ioNote">数据保存在你的账号里，只有你能看到。</div>
-  </section>
+<!-- "更多" sheet: everything that is not used every day -->
+<div class="overlay sheet-overlay" id="moreOverlay" role="dialog" aria-modal="true" aria-labelledby="moreTitle">
+  <div class="sheet">
+    <span class="grab" aria-hidden="true"></span>
+    <div class="sheet-head"><h2 id="moreTitle">更多</h2><button class="ghost" id="moreClose">完成</button></div>
+    <div class="status" id="storeStatus">正在连接…</div>
 
-  <section class="card" id="syncCard">
-    <h2><span>多端同步</span></h2>
-    <div id="syncBox"></div>
-  </section>
+    <button class="rowbtn" id="colorBtn"><span>线条颜色</span><span class="dots"><i style="background:var(--line)"></i><i style="background:var(--d-good)"></i><i style="background:var(--d-bad)"></i></span></button>
+
+    <section class="card" id="aiCard">
+      <h2><span>AI 睡眠总结 · <span id="aiRange"></span></span>
+        <button class="primary" id="aiBtn">生成总结</button></h2>
+      <div id="aiOut" class="ai-out"></div>
+      <div id="aiMeta" class="ai-meta"></div>
+    </section>
+
+    <section class="card" id="syncCard">
+      <h2><span>多端同步</span></h2>
+      <div id="syncBox"></div>
+    </section>
+
+    <section class="card io">
+      <h2><span>备份数据</span>
+        <span style="display:flex;gap:8px"><button id="expBtn">复制全部数据</button><button id="impToggle">粘贴导入</button></span></h2>
+      <div id="impBox" class="hidden field">
+        <label for="impText">把之前复制的数据粘贴到这里（同一条记录会被覆盖）</label>
+        <textarea id="impText" spellcheck="false"></textarea>
+        <div class="actions"><span id="impMsg" class="err"></span><button class="primary" id="impBtn">导入</button></div>
+      </div>
+      <div class="note" id="ioNote">数据保存在你的账号里，只有你能看到。</div>
+    </section>
+
+    <a class="rowbtn" href="./"><span>返回工具箱首页</span><span aria-hidden="true">›</span></a>
+  </div>
 </div>
 
 <!-- record editor -->
@@ -584,6 +654,20 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
     ].join("");
   }
 
+  // one quiet line at the bottom instead of stat tiles
+  function renderSummary(st) {
+    const el = $("summary"), btn = $("addBtn");
+    if (view === "day") {
+      const t = st.list.reduce((a, r) => { const { s, e } = span(r); return a + e - s; }, 0);
+      el.innerHTML = st.n ? "点上面的记录可以修改，也可以再加一段（比如午睡）" : "这一晚还没有记录";
+      btn.textContent = st.n ? "＋ 再加一段睡眠" : "＋ 给这一晚加记录";
+      return;
+    }
+    const unit = { week: "这一周", month: "这个月", year: "这一年" }[view];
+    el.innerHTML = st.n ? `${unit}平均睡 <b>${fmtH(st.avgDur)}</b>，大多在 <b>${fmtHM(st.avgBed + AX0)}</b> 左右入睡 · ${st.n} 晚` : `${unit}还没有记录`;
+    btn.textContent = "＋ 记录睡眠";
+  }
+
   // ================= drawing =================
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   const moonSVG = c => `<svg class="moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2a6 6 0 1 0 3 9A5 5 0 0 1 11 2z" fill="${c}"/></svg>`;
@@ -650,8 +734,8 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 
   function renderDay(range, st) {
     const n = focus, m = addDays(n, 1);
-    let html = `<div class="dayhead"><div class="big">${md(n)}<i> 周${WD[wdOf(n)]} 晚</i> → ${md(m)}<i> 周${WD[wdOf(m)]}</i></div>
-      <button class="primary" id="dayAdd">＋ 给这一晚加记录</button></div>`;
+    const dayTot = st.list.reduce((a, r) => { const { s, e } = span(r); return a + e - s; }, 0);
+    let html = `<div class="daybig">${st.n ? Math.floor(dayTot / 60) + "h" + String(Math.round(dayTot % 60)).padStart(2, "0") + "m" : "—"}<small>周${WD[wdOf(n)]}晚 → 周${WD[wdOf(m)]}早上${st.list.length > 1 ? `（${st.list.length} 段）` : ""}</small></div>`;
     html += `<div class="tl-scroll daytrack"><div class="tl">` + axisHTML("") +
       `<div class="rows"><div class="row" data-night="${n}" tabindex="0"><div class="lcol">${dateLabel(n, true)}<span class="brace"></span></div><div class="track">${segsFor(n)}</div><div class="side">${sideFor(n)}</div></div>
       <div class="lcol" style="height:0">${dateLabel(m, true)}</div></div></div></div>`;
@@ -733,6 +817,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
     document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === view)));
     $("rangeLabel").textContent = range.label;
     renderStats(st, range);
+    renderSummary(st);
     const titles = { day: "这一晚", week: "一周时间轴", month: "一个月时间轴", year: "全年概览" };
     const hints = { day: "点线段或下面的卡片可以修改", week: "两个日期之间的那一行 = 那一晚。点空白处添加，点线段修改，点日期看那一晚", month: "两个日期之间的那一行 = 那一晚。点空白处添加，点线段修改，点日期看那一晚", year: "点一行或一个格子可以跳过去看" };
     $("mainTitle").textContent = titles[view]; $("mainHint").textContent = hints[view];
@@ -749,6 +834,10 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
   $("prevBtn").onclick = () => shift(-1);
   $("nextBtn").onclick = () => shift(1);
   $("todayBtn").onclick = () => { focus = currentNight(); render(); };
+  const closeMore = () => $("moreOverlay").classList.remove("open");
+  $("moreBtn").onclick = () => $("moreOverlay").classList.add("open");
+  $("moreClose").onclick = closeMore;
+  $("moreOverlay").addEventListener("mousedown", e => { if (e.target === $("moreOverlay")) closeMore(); });
   $("addBtn").onclick = () => openEditor(null, view === "day" ? focus : currentNight());
   function activate(t) {
     const go = t.closest("[data-goto]");
@@ -802,7 +891,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
   function closeEditor() { $("overlay").classList.remove("open"); editing = null; }
   $("cancelBtn").onclick = closeEditor;
   $("overlay").addEventListener("mousedown", e => { if (e.target === $("overlay")) closeEditor(); });
-  document.addEventListener("keydown", e => { if (e.key === "Escape") { closeEditor(); $("colorOverlay").classList.remove("open"); } });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { if ($("colorOverlay").classList.contains("open")) { $("colorOverlay").classList.remove("open"); return; } closeEditor(); $("moreOverlay").classList.remove("open"); } });
   $("form").addEventListener("submit", async e => {
     e.preventDefault();
     const n = $("fNight").value, b = $("fBed").value, u = $("fUp").value;
