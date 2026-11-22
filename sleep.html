@@ -24,9 +24,9 @@
   --hover: rgba(57,166,200,.10);
   --night: rgba(39,48,65,.035);
   --line: #9ccfee;
-  --d-good: #aab9f5;
-  --d-bad: #f4a7b9;
-  --d-neutral: #c9cdd6;
+  --d-good: #9ccfee;
+  --d-bad: #b3b9c3;
+  --d-neutral: #ffffff;
   --on-line: #273041;
   --on-good: #273041;
   --on-bad: #273041;
@@ -167,7 +167,11 @@ button:disabled { opacity: .5; cursor: default; }
 .cell.has { opacity: 1; }
 .cell:hover { box-shadow: 0 0 8px 1px var(--line); transform: scale(1.15); z-index: 1; }
 .cell.none { visibility: hidden; }
-.cell .dm { position: absolute; right: 1px; bottom: 1px; width: 5px; height: 5px; border-radius: 50%; }
+.cell .dm { position: absolute; right: 1px; bottom: 1px; width: 5px; height: 5px; border-radius: 50%; box-shadow: 0 0 0 1px var(--line); }
+.seg.nm { box-shadow: inset 0 0 0 1.5px var(--line); }
+.seg.nm::before, .seg.nm::after { box-shadow: inset 0 0 0 1.5px var(--line); }
+.swb-auto { font-size: 12.5px; padding: 3px 10px; border-radius: 999px; }
+.swb-auto[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 
 /* AI */
 .ai-out { font-size: 14.5px; max-width: 72ch; }
@@ -197,7 +201,7 @@ textarea { font-family: var(--font-body); min-height: 70px; resize: vertical; }
 .choices button[aria-pressed="true"] { background: var(--line); border-color: var(--line); color: var(--on-line); }
 .choices.mood button[data-v="good"][aria-pressed="true"] { background: var(--d-good); border-color: var(--d-good); color: var(--on-good); }
 .choices.mood button[data-v="bad"][aria-pressed="true"] { background: var(--d-bad); border-color: var(--d-bad); color: var(--on-bad); }
-.choices.mood button[data-v="neutral"][aria-pressed="true"] { background: var(--d-neutral); border-color: var(--d-neutral); color: var(--on-neutral); }
+.choices.mood button[data-v="neutral"][aria-pressed="true"] { background: var(--d-neutral); border-color: var(--line); box-shadow: inset 0 0 0 1px var(--line); color: var(--on-neutral); }
 .actions { display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
 .actions .r { display: flex; gap: 8px; }
 .danger { color: var(--d-bad); }
@@ -278,8 +282,6 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 .howto summary::-webkit-details-marker { display: none; }
 .howto .note { margin: 2px 0 6px; }
 .avgline { display: none; }
-.rows .seg .lb { display: none; }
-.daytrack .seg .lb { display: none; }
 .rows .side .pips { display: none; }
 .axis .sidehead { visibility: hidden; }
 /* bottom bar */
@@ -473,7 +475,9 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
   let view = "month";
   let focus = currentNight();
   let editing = null;
-  const DEF_COLORS = { line: "#9ccfee", good: "#aab9f5", bad: "#f4a7b9", neutral: "#c9cdd6", byDream: false };
+  const DEF_COLORS = { line: "#9ccfee", good: "auto", bad: "#b3b9c3", neutral: "#ffffff", byDream: false };
+  // good dreams follow the line color unless the person picks their own ("auto")
+  const goodColor = () => colors.good === "auto" ? colors.line : colors.good;
   const OLD_DEF = { line: "#39a6c8", good: "#2f6fd0", bad: "#d2483c", neutral: "#9aa1ab" };
   let colors = { ...DEF_COLORS };
 
@@ -522,21 +526,21 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
   // ================= colors =================
   const PRESETS = {
     line: ["#9ccfee", "#b7c8f6", "#cdbdf2", "#f5bcd3", "#a9ded3", "#f6d9ad", "#dccdea", "#bcc7d4"],
-    good: ["#aab9f5", "#9ccfee", "#a9ded3", "#cdbdf2"],
-    bad: ["#f4a7b9", "#f5bcd3", "#f2b8a2", "#e7aacb"],
-    neutral: ["#c9cdd6", "#d6d1e2", "#dad4c8", "#bfc7d5"]
+    good: ["#9ccfee", "#aab9f5", "#a9ded3", "#cdbdf2"],
+    bad: ["#b3b9c3", "#8f97a3", "#f4a7b9", "#cdbdf2"],
+    neutral: ["#ffffff", "#f1f3f6", "#e8e3f2", "#f6efe3"]
   };
   const CNAME = { line: "", good: "好梦", bad: "噩梦", neutral: "普通的梦" };
   const okHex = v => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
   function applyColors() {
     const r = document.documentElement.style;
-    r.setProperty("--line", colors.line); r.setProperty("--d-good", colors.good); r.setProperty("--d-bad", colors.bad); r.setProperty("--d-neutral", colors.neutral);
+    r.setProperty("--line", colors.line); r.setProperty("--d-good", goodColor()); r.setProperty("--d-bad", colors.bad); r.setProperty("--d-neutral", colors.neutral);
     const h = colors.line; const n = parseInt(h.slice(1), 16);
     r.setProperty("--hover", `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},.16)`);
     // text on a colored background: dark on light colors, white on dark ones
     const lum = hx => { const v = parseInt(hx.slice(1), 16); const f = c => { c /= 255; return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); }; return .2126 * f(v >> 16) + .7152 * f((v >> 8) & 255) + .0722 * f(v & 255); };
     const on = hx => lum(hx) > .36 ? "#273041" : "#ffffff";
-    r.setProperty("--on-line", on(colors.line)); r.setProperty("--on-good", on(colors.good)); r.setProperty("--on-bad", on(colors.bad)); r.setProperty("--on-neutral", on(colors.neutral));
+    r.setProperty("--on-line", on(colors.line)); r.setProperty("--on-good", on(goodColor())); r.setProperty("--on-bad", on(colors.bad)); r.setProperty("--on-neutral", on(colors.neutral));
     // readable text version of the line color, for dates and links on the page background
     const mix = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16); const ch = s => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + [16, 8, 0].map(s => ch(s).toString(16).padStart(2, "0")).join(""); };
     r.setProperty("--line-text", lum(colors.line) > .36 ? mix(colors.line, "#273041", .5) : colors.line);
@@ -544,7 +548,9 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
   function setColors(c) {
     // anyone still on the old default palette moves to the new pastel defaults
     if (c && c.line === OLD_DEF.line && c.good === OLD_DEF.good && c.bad === OLD_DEF.bad && c.neutral === OLD_DEF.neutral) c = { ...c, line: DEF_COLORS.line, good: DEF_COLORS.good, bad: DEF_COLORS.bad, neutral: DEF_COLORS.neutral };
-    colors = { line: okHex(c.line) ? c.line : DEF_COLORS.line, good: okHex(c.good) ? c.good : DEF_COLORS.good, bad: okHex(c.bad) ? c.bad : DEF_COLORS.bad, neutral: okHex(c.neutral) ? c.neutral : DEF_COLORS.neutral, byDream: !!c.byDream };
+    // anyone still on the first pastel dream colors moves to the new dream defaults
+    if (c && c.good === "#aab9f5" && c.bad === "#f4a7b9" && c.neutral === "#c9cdd6") c = { ...c, good: DEF_COLORS.good, bad: DEF_COLORS.bad, neutral: DEF_COLORS.neutral };
+    colors = { line: okHex(c.line) ? c.line : DEF_COLORS.line, good: okHex(c.good) || c.good === "auto" ? c.good : DEF_COLORS.good, bad: okHex(c.bad) ? c.bad : DEF_COLORS.bad, neutral: okHex(c.neutral) ? c.neutral : DEF_COLORS.neutral, byDream: !!c.byDream };
     applyColors();
   }
   let colorSaveT = null;
@@ -557,10 +563,11 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
     document.querySelectorAll(".colorrow").forEach(row => {
       const k = row.dataset.key;
       row.innerHTML = (CNAME[k] ? `<span class="nm">${CNAME[k]}</span>` : "") + `<div class="sws">` +
+        (k === "good" ? `<button type="button" class="swb-auto" data-c="auto" aria-pressed="${colors.good === "auto"}">跟随主题色</button>` : "") +
         PRESETS[k].map(c => `<button type="button" class="swb" style="background:${c}" data-c="${c}" aria-label="${c}" aria-pressed="${c.toLowerCase() === colors[k].toLowerCase()}"></button>`).join("") +
-        `<input type="color" value="${colors[k]}" aria-label="自定义${CNAME[k] || "睡眠线"}颜色"></div>`;
-      row.querySelectorAll(".swb").forEach(b => b.onclick = () => { colors[k] = b.dataset.c; applyColors(); persistColors(); renderColorPanel(); render(); });
-      row.querySelector("input").oninput = e => { colors[k] = e.target.value; applyColors(); persistColors(); render(); row.querySelectorAll(".swb").forEach(b => b.setAttribute("aria-pressed", "false")); };
+        `<input type="color" value="${k === "good" ? goodColor() : colors[k]}" aria-label="自定义${CNAME[k] || "睡眠线"}颜色"></div>`;
+      row.querySelectorAll(".swb, .swb-auto").forEach(b => b.onclick = () => { colors[k] = b.dataset.c; applyColors(); persistColors(); renderColorPanel(); render(); });
+      row.querySelector("input").oninput = e => { colors[k] = e.target.value; applyColors(); persistColors(); render(); row.querySelectorAll(".swb, .swb-auto").forEach(b => b.setAttribute("aria-pressed", "false")); };
     });
     $("byDream").checked = colors.byDream;
   }
@@ -670,7 +677,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 
   // ================= drawing =================
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
-  const moonSVG = c => `<svg class="moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2a6 6 0 1 0 3 9A5 5 0 0 1 11 2z" fill="${c}"/></svg>`;
+  const moonSVG = c => `<svg class="moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2a6 6 0 1 0 3 9A5 5 0 0 1 11 2z" fill="${c}"${c === "var(--d-neutral)" ? ' stroke="var(--line)" stroke-width="1.4"' : ""}/></svg>`;
   const MOOD = { good: "好梦", bad: "噩梦", neutral: "普通的梦" };
   function axisHTML(sideHead) {
     let t = ""; for (let i = 0; i < 24; i++) { let h = (20 + i) % 24; if (h === 0) h = 24; t += `<span style="left:${(i / 24) * 100}%">${h}</span>`; }
@@ -691,6 +698,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
       const before = Math.max(0, Math.min(e, ws) - s), after = Math.max(0, e - Math.max(s, we));
       const mine = (b - a) >= before && (b - a) >= after;
       const cls = ["seg"]; if (s < ws) cls.push("cutL"); if (e > we) cls.push("cutR");
+      if (colors.byDream && r.dream === "yes" && r.mood && r.mood !== "good" && r.mood !== "bad") cls.push("nm");
       const tip = tipOf(r);
       out += `<div class="${cls.join(" ")}" style="left:${(a - ws) / DAY * 100}%;width:${(b - a) / DAY * 100}%;color:${segColor(r)}" data-id="${esc(r.id)}" title="${esc(tip)}" tabindex="0" role="button" aria-label="${esc(tip)}">${mine ? `<span class="lb">${fmtH(e - s)}</span>` : ""}</div>`;
     });
@@ -746,7 +754,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
         const { s, e } = span(r);
         const chips = [];
         if (r.quality) chips.push(`<span>质量 <b style="color:var(--ink)">${r.quality}</b>/5</span>`);
-        if (r.dream === "yes") chips.push(`<span class="chip" style="background:${moodVar(r.mood)};color:var(--on-${r.mood === "good" || r.mood === "bad" ? r.mood : "neutral"})">${MOOD[r.mood] || "做了梦"}</span>`);
+        if (r.dream === "yes") chips.push(`<span class="chip" style="background:${moodVar(r.mood)};color:var(--on-${r.mood === "good" || r.mood === "bad" ? r.mood : "neutral"})${r.mood === "good" || r.mood === "bad" ? "" : ";box-shadow:inset 0 0 0 1.5px var(--line)"}">${MOOD[r.mood] || "做了梦"}</span>`);
         else if (r.dream === "no") chips.push("<span>没做梦</span>"); else if (r.dream === "unsure") chips.push("<span>不记得有没有做梦</span>");
         return `<div class="rec" data-id="${esc(r.id)}" tabindex="0" role="button" style="border-left-color:${segColor(r)}">
           <div class="t">${md(idxStr(Math.floor(s / DAY)))} <b>${r.bed}</b> 入睡 → ${md(idxStr(Math.floor(e / DAY)))} <b>${r.up}</b> 起床 · ${fmtLong(e - s)}</div>
