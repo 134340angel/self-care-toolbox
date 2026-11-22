@@ -583,15 +583,15 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
     if (view === "week") {
       const morning = addDays(focus, 1); const wd = (wdOf(morning) + 6) % 7; // Monday = 0
       const mon = addDays(morning, -wd), sun = addDays(mon, 6);
-      return { nights: nightsBetween(mon, sun), key: "week-" + mon, label: `${md(mon)} – ${md(sun)} 早上`, mon, sun };
+      return { nights: nightsBetween(mon, sun), key: "week-" + mon, label: `${md(mon)} – ${md(sun)}`, mon, sun };
     }
     if (view === "month") {
       const ym = monthOf(addDays(focus, 1));
       const [y, m] = ym.split("-").map(Number);
-      return { nights: nightsBetween(ym + "-01", lastDayOf(ym)), key: "month-" + ym, label: `${y}年${m}月`, ym };
+      return { nights: nightsBetween(ym + "-01", lastDayOf(ym)), key: "month-" + ym, label: `${y}/${m}`, ym };
     }
     const y = addDays(focus, 1).slice(0, 4);
-    return { nights: nightsBetween(y + "-01-01", y + "-12-31"), key: "year-" + y, label: `${y}年`, year: y };
+    return { nights: nightsBetween(y + "-01-01", y + "-12-31"), key: "year-" + y, label: `${y}`, year: y };
   }
   function shift(dir) {
     if (view === "day") focus = addDays(focus, dir);
