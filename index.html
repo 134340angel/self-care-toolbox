@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Self-care">
+<title>Self-care Toolbox · 自我照顾工具箱</title>
+<style>
+:root { --paper:#f6f7f4; --card:#fff; --ink:#273041; --muted:#727c8c; --rule:#e2e5e8; --line:#39a6c8; color-scheme:light; }
+@media (prefers-color-scheme: dark) { :root { --paper:#11161f; --card:#181f2b; --ink:#e4e8ee; --muted:#8b95a6; --rule:#273041; --line:#5cc3e2; color-scheme:dark; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif; line-height:1.6; }
+.wrap { max-width:720px; margin:0 auto; padding:48px 20px 64px; }
+.logo { display:block; width:112px; height:112px; border-radius:26px; margin:0 0 18px; box-shadow:0 4px 18px rgba(39,48,65,.10); }
+h1 { font-size:26px; margin:0 0 6px; }
+.sub { color:var(--muted); margin:0 0 32px; }
+.tools { display:grid; gap:14px; }
+a.tool { display:flex; gap:16px; align-items:center; text-decoration:none; color:inherit; background:var(--card); border:1px solid var(--rule); border-radius:14px; padding:18px 20px; transition:border-color .15s, box-shadow .15s; }
+a.tool:hover, a.tool:focus-visible { border-color:var(--line); box-shadow:0 0 0 3px rgba(57,166,200,.15); outline:none; }
+.icon { font-size:30px; line-height:1; }
+.tool h2 { margin:0 0 2px; font-size:17px; }
+.tool p { margin:0; color:var(--muted); font-size:14px; }
+.soon { border-style:dashed; color:var(--muted); text-align:center; padding:16px; border:1px dashed var(--rule); border-radius:14px; font-size:14px; }
+.notes { margin-top:36px; font-size:13.5px; color:var(--muted); display:grid; gap:8px; }
+.notes b { color:var(--ink); font-weight:600; }
+footer { margin-top:32px; font-size:12.5px; color:var(--muted); }
+footer a { color:var(--line); }
+</style>
+</head>
+<body>
+<main class="wrap">
+<img class="logo" src="./icon-512.png" alt="" width="112" height="112">
+<h1>Self-care Toolbox</h1>
+<p class="sub">一组简单、安静的生活小工具，给需要精神状态管理的人。不用注册，打开就能用。</p>
+<div class="tools">
+<a class="tool" href="./sleep.html">
+<span class="icon">🌙</span>
+<div><h2>睡眠时间轴</h2><p>记录入睡、起床、睡眠质量和梦，按日 / 周 / 月 / 年查看作息规律</p></div>
+</a>
+<div class="soon">更多小工具会慢慢加上</div>
+</div>
+<div class="notes">
+<div>🔒 <b>隐私：</b>你的数据只保存在你自己的浏览器里，不会上传到任何地方。换设备或清除浏览器数据会丢失记录，请定期用工具里的「复制全部数据」备份。</div>
+<div>⚠️ <b>请注意：</b>这些工具只用来自我记录和整理生活，不能代替医生、心理咨询师或任何专业治疗。</div>
+</div>
+<footer>项目地址：<a href="https://github.com/134340angel/self-care-toolbox">github.com/134340angel/self-care-toolbox</a></footer>
+</main>
+<script>if ("serviceWorker" in navigator) { navigator.serviceWorker.register("./sw.js"); }</script>
+</body>
+</html>

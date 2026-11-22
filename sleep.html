@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Self-care">
+<title>睡眠时间轴</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a ruled notebook page. Dates sit ON the ruled lines; each night's sleep is a marker stroke drawn BETWEEN two dates, axis 20:00 → next day 20:00. */
+:root {
+  --paper: #f6f7f4;
+  --card: #ffffff;
+  --ink: #273041;
+  --muted: #727c8c;
+  --rule: #e2e5e8;
+  --hover: rgba(57,166,200,.10);
+  --night: rgba(39,48,65,.035);
+  --line: #39a6c8;
+  --d-good: #2f6fd0;
+  --d-bad: #d2483c;
+  --d-neutral: #9aa1ab;
+  --font-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+  --font-hand: "Caveat", "Comic Sans MS", cursive;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --lab: 64px;
+  --side: 74px;
+  --rowh: 34px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11161f; --card: #181f2b; --ink: #e4e8ee; --muted: #8b95a6; --rule: #273041;
+    --hover: rgba(92,195,226,.10); --night: rgba(255,255,255,.025); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #11161f; --card: #181f2b; --ink: #e4e8ee; --muted: #8b95a6; --rule: #273041;
+  --hover: rgba(92,195,226,.10); --night: rgba(255,255,255,.025); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 20px 20px 48px; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; justify-content: space-between; }
+h1 { margin: 0; font-size: 22px; letter-spacing: .02em; text-wrap: balance; }
+h1 small { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 8px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; justify-content: space-between; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nav { display: flex; align-items: center; gap: 6px; }
+.nav .lbl { font-weight: 600; min-width: 150px; text-align: center; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--rule); background: var(--card); padding: 6px 12px; transition: border-color .15s, box-shadow .15s; }
+button:hover { border-color: var(--line); box-shadow: 0 0 0 3px var(--hover); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, .seg:focus-visible, .row:focus-visible, .cell:focus-visible, .dl:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
+button.primary { background: var(--line); border-color: var(--line); color: #fff; font-weight: 600; }
+button.ghost { background: transparent; }
+button:disabled { opacity: .5; cursor: default; }
+.tabs { display: inline-flex; border: 1px solid var(--rule); border-radius: 10px; padding: 3px; background: var(--card); gap: 2px; }
+.tabs button { border: 0; padding: 5px 14px; border-radius: 7px; background: transparent; }
+.tabs button:hover { box-shadow: none; background: var(--hover); }
+.tabs button[aria-selected="true"] { background: var(--line); color: #fff; font-weight: 600; }
+.card { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; }
+.card h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
+.note { color: var(--muted); font-size: 12.5px; font-weight: 400; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.stat { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 10px 14px; }
+.stat .k { color: var(--muted); font-size: 12px; }
+.stat .v { font-family: var(--font-mono); font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.stat .v small { font-size: 14px; color: var(--muted); }
+.stat .s { color: var(--muted); font-size: 12px; }
+
+/* timeline */
+.tl-scroll { overflow-x: auto; margin: 0 -6px; padding: 12px 6px 0; }
+.tl { min-width: 700px; position: relative; }
+.axis { display: grid; grid-template-columns: var(--lab) 1fr var(--side); height: 28px; margin-bottom: 10px; }
+.axis .ticks { position: relative; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); font-family: var(--font-hand); font-size: 19px; top: 0; }
+.axis .sidehead { font-size: 11px; color: var(--muted); text-align: center; padding-top: 6px; }
+.rows { position: relative; margin-bottom: 26px; }
+.row { display: grid; grid-template-columns: var(--lab) 1fr var(--side); height: var(--rowh); position: relative; cursor: pointer; }
+.row > .track, .row > .side { border-top: 1px solid var(--rule); }
+.rows .row:last-of-type > .track, .rows .row:last-of-type > .side { border-bottom: 1px solid var(--rule); }
+.row:hover > .track { background-color: var(--hover); }
+.row:hover > .lcol .brace { border-color: var(--line); }
+.row.out { opacity: .5; }
+.lcol { position: relative; }
+.dl { position: absolute; left: 0; top: 0; transform: translateY(-50%); font-family: var(--font-hand); font-size: 19px; line-height: 1; display: flex; align-items: baseline; gap: 3px; white-space: nowrap; cursor: pointer; padding: 1px 2px; border-radius: 4px; z-index: 1; }
+.dl:hover { color: var(--line); }
+.dl i { font-style: normal; font-family: var(--font-body); font-size: 10px; color: var(--muted); }
+.dl.we { color: var(--muted); }
+.dl.today { color: var(--line); font-weight: 700; }
+.dl.end { position: relative; transform: none; margin-top: -10px; display: inline-flex; }
+.brace { position: absolute; right: 8px; top: 7px; bottom: 7px; width: 7px; border: 1.5px solid var(--rule); border-left: 0; border-radius: 0 8px 8px 0; transition: border-color .15s; }
+.track { position: relative;
+  background-image:
+    linear-gradient(to right, var(--night) 0, var(--night) 41.667%, transparent 41.667%),
+    repeating-linear-gradient(to right, var(--rule) 0 1px, transparent 1px calc(100% / 24));
+}
+.track::after { content: ""; position: absolute; top: 0; bottom: 0; left: calc(100% * 4 / 24); width: 1px; background: var(--muted); opacity: .35; }
+.seg { position: absolute; top: 50%; height: 7px; transform: translateY(-50%); background: currentColor; border-radius: 4px; transition: height .12s, box-shadow .15s, filter .15s; z-index: 2; }
+.seg::before, .seg::after { content: ""; position: absolute; top: 50%; width: 11px; height: 11px; border-radius: 50%; background: currentColor; transform: translate(-50%, -50%); }
+.seg::before { left: 0; } .seg::after { left: 100%; }
+.seg.cutL::before, .seg.cutR::after { display: none; }
+.seg.cutR { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.seg.cutL { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.seg:hover, .seg:focus-visible { height: 9px; box-shadow: 0 0 10px 1px currentColor; filter: brightness(1.08); }
+.seg .lb { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); font-family: var(--font-hand); font-size: 19px; font-weight: 700; color: var(--ink); white-space: nowrap; line-height: 1; padding: 0 4px; text-shadow: 0 0 3px var(--card), 0 0 3px var(--card), 0 0 2px var(--card); pointer-events: none; }
+.seg.band { height: 16px; opacity: .18; border-radius: 8px; z-index: 1; pointer-events: none; }
+.seg.band::before, .seg.band::after { display: none; }
+.side { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.pips { display: flex; gap: 2px; }
+.pips b { width: 5px; height: 12px; border-radius: 2px; background: var(--rule); }
+.pips b.on { background: var(--ink); opacity: .75; }
+.moon { width: 14px; height: 14px; display: block; }
+.side .cnt { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.avgline { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px dashed var(--muted); opacity: .55; pointer-events: none; }
+.avgline span { position: absolute; bottom: -22px; left: 3px; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.nowline { position: absolute; top: 3px; bottom: 3px; width: 2px; background: var(--d-bad); border-radius: 1px; pointer-events: none; z-index: 3; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); margin-top: 6px; align-items: center; }
+.legend .sw { display: inline-flex; align-items: center; gap: 5px; }
+.legend .bar { width: 22px; height: 6px; border-radius: 3px; display: inline-block; }
+.empty { padding: 8px 0 4px; color: var(--muted); font-size: 13px; }
+
+/* day view */
+.dayhead { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.dayhead .big { font-family: var(--font-hand); font-size: 30px; line-height: 1.1; }
+.dayhead .big i { font-style: normal; font-family: var(--font-body); font-size: 13px; color: var(--muted); }
+.daytrack .row { height: 64px; }
+.daytrack .seg { height: 12px; }
+.daytrack .seg::before, .daytrack .seg::after { width: 16px; height: 16px; }
+.daytrack .seg:hover { height: 14px; }
+.daytrack .seg .lb { font-size: 24px; bottom: 7px; }
+.recs { display: grid; gap: 10px; margin-top: 4px; }
+.rec { border: 1px solid var(--rule); border-left: 5px solid var(--line); border-radius: 10px; padding: 10px 14px; display: grid; gap: 4px; cursor: pointer; transition: box-shadow .15s; }
+.rec:hover { box-shadow: 0 0 0 3px var(--hover); }
+.rec .t { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.rec .t b { font-weight: 500; }
+.rec .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13.5px; color: var(--muted); align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 12.5px; color: #fff; }
+.rec .dream { font-size: 14px; white-space: pre-wrap; }
+.rec .nt { font-size: 13px; color: var(--muted); white-space: pre-wrap; }
+
+/* year view */
+.yearrows .row { cursor: pointer; }
+.ylab { font-size: 14px; display: flex; align-items: center; padding-left: 4px; font-weight: 600; }
+.ylab i { font-style: normal; font-weight: 400; font-size: 11px; color: var(--muted); margin-left: 4px; }
+.yearrows .row > .track, .yearrows .row > .side { border-top: 1px solid var(--rule); }
+.heat-wrap { overflow-x: auto; margin-top: 18px; }
+.heat { display: grid; grid-template-columns: 40px repeat(31, minmax(16px, 1fr)); gap: 3px; min-width: 640px; font-size: 10.5px; color: var(--muted); }
+.heat .hd { text-align: center; font-family: var(--font-mono); }
+.heat .ml { font-size: 12px; display: flex; align-items: center; }
+.cell { aspect-ratio: 1; border-radius: 3px; background: var(--rule); opacity: .55; cursor: pointer; position: relative; transition: box-shadow .15s, transform .12s; }
+.cell.has { opacity: 1; }
+.cell:hover { box-shadow: 0 0 8px 1px var(--line); transform: scale(1.15); z-index: 1; }
+.cell.none { visibility: hidden; }
+.cell .dm { position: absolute; right: 1px; bottom: 1px; width: 5px; height: 5px; border-radius: 50%; }
+
+/* AI */
+.ai-out { font-size: 14.5px; max-width: 72ch; }
+.ai-out h4 { margin: 14px 0 4px; font-size: 14.5px; }
+.ai-out h4:first-child { margin-top: 0; }
+.ai-out ul { margin: 4px 0; padding-left: 20px; }
+.ai-out p { margin: 6px 0; }
+.ai-empty { color: var(--muted); font-size: 13.5px; }
+.ai-meta { color: var(--muted); font-size: 12px; margin-top: 10px; }
+.status { font-size: 12px; color: var(--muted); }
+.status.warn { color: var(--d-bad); }
+
+/* modal */
+.overlay { position: fixed; inset: 0; background: rgba(15,20,30,.45); display: none; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 20; overflow-y: auto; }
+.overlay.open { display: flex; }
+.modal { background: var(--card); color: var(--ink); border-radius: 16px; width: min(520px, 100%); padding: 20px; display: grid; gap: 14px; border: 1px solid var(--rule); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.modal h3 { margin: 0; font-size: 17px; }
+.field { display: grid; gap: 6px; }
+.field > label, .field > .lab { font-size: 12.5px; color: var(--muted); }
+.trio { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; }
+input[type="date"], input[type="time"], textarea { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 7px 9px; width: 100%; font-family: var(--font-mono); }
+textarea { font-family: var(--font-body); min-height: 70px; resize: vertical; }
+.durline { font-size: 13px; color: var(--muted); }
+.durline b { color: var(--ink); font-family: var(--font-mono); font-weight: 500; }
+.choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.choices button { padding: 5px 11px; font-size: 13.5px; }
+.choices button[aria-pressed="true"] { background: var(--line); border-color: var(--line); color: #fff; }
+.choices.mood button[data-v="good"][aria-pressed="true"] { background: var(--d-good); border-color: var(--d-good); }
+.choices.mood button[data-v="bad"][aria-pressed="true"] { background: var(--d-bad); border-color: var(--d-bad); }
+.choices.mood button[data-v="neutral"][aria-pressed="true"] { background: var(--d-neutral); border-color: var(--d-neutral); }
+.actions { display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+.actions .r { display: flex; gap: 8px; }
+.danger { color: var(--d-bad); }
+.err { color: var(--d-bad); font-size: 13px; min-height: 1em; }
+.hidden { display: none !important; }
+.io textarea { font-family: var(--font-mono); font-size: 12px; min-height: 120px; }
+.colorrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.colorrow .nm { width: 70px; font-size: 14px; }
+.sws { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.swb { width: 24px; height: 24px; border-radius: 50%; padding: 0; border: 2px solid var(--card); box-shadow: 0 0 0 1px var(--rule); }
+.swb[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid var(--rule); border-radius: 6px; background: none; cursor: pointer; }
+.toggle { display: flex; gap: 8px; align-items: center; font-size: 14px; cursor: pointer; }
+.toggle input { width: 16px; height: 16px; accent-color: var(--line); }
+@media (max-width: 480px) { .trio { grid-template-columns: 1fr 1fr; } .trio .field:first-child { grid-column: 1 / -1; } .nav .lbl { min-width: 110px; } }
+/* phone layout */
+.wrap { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 600px) {
+  .wrap { padding: 14px 12px 40px; gap: 12px; }
+  header { gap: 8px; }
+  h1 { font-size: 20px; }
+  h1 small { display: block; margin: 2px 0 0; }
+  .tools button { padding: 6px 10px; font-size: 14px; }
+  .toolbar { gap: 8px; }
+  .tabs { width: 100%; }
+  .tabs button { flex: 1; padding: 6px 0; }
+  .nav { width: 100%; justify-content: space-between; }
+  .nav .lbl { min-width: 0; flex: 1; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stats .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .stat { padding: 8px 10px; }
+  .stat .v { font-size: 19px; }
+  .card { padding: 12px; }
+  .card h2 { margin-bottom: 6px; }
+  #mainHint { display: block; width: 100%; font-size: 12px; }
+  :root { --lab: 46px; --side: 52px; --rowh: 30px; }
+  .tl { min-width: 0; }
+  .tl-scroll { margin: 0; padding: 10px 0 0; }
+  .axis .ticks span { font-size: 13px; }
+  .axis .ticks span:nth-child(even) { display: none; }
+  .axis .sidehead { font-size: 10px; }
+  .dl { font-size: 15px; }
+  .dl i { font-size: 9px; }
+  .seg .lb { font-size: 14px; bottom: 3px; }
+  .pips b { width: 4px; height: 10px; }
+  .side { gap: 3px; }
+  .moon { width: 12px; height: 12px; }
+  .avgline span { font-size: 9.5px; }
+  .daytrack .row { height: 56px; }
+  .daytrack .seg .lb { font-size: 18px; }
+  .dayhead .big { font-size: 24px; }
+  .heat { min-width: 560px; }
+  .modal { padding: 16px; }
+  .overlay { padding: 16px 10px; }
+  input[type="date"], input[type="time"], textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>睡眠时间轴<small id="storeStatus" class="status">正在连接…</small></h1>
+    <div class="tools">
+      <button id="colorBtn">线条颜色</button>
+      <button class="primary" id="addBtn">＋ 记录睡眠</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="tabs" role="tablist" aria-label="视图">
+      <button role="tab" data-view="day">日</button>
+      <button role="tab" data-view="week">周</button>
+      <button role="tab" data-view="month">月</button>
+      <button role="tab" data-view="year">年</button>
+    </div>
+    <div class="nav">
+      <button id="prevBtn" aria-label="上一个">‹</button>
+      <span class="lbl" id="rangeLabel"></span>
+      <button id="nextBtn" aria-label="下一个">›</button>
+      <button class="ghost" id="todayBtn">今天</button>
+    </div>
+  </div>
+
+  <section class="stats" id="stats" aria-label="统计"></section>
+
+  <section class="card">
+    <h2><span id="mainTitle">时间轴</span><span class="note" id="mainHint"></span></h2>
+    <div id="main"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="card" id="aiCard">
+    <h2><span>AI 睡眠总结 · <span id="aiRange"></span></span>
+      <button class="primary" id="aiBtn">生成总结</button></h2>
+    <div id="aiOut" class="ai-out"></div>
+    <div id="aiMeta" class="ai-meta"></div>
+  </section>
+
+  <section class="card io">
+    <h2><span>备份数据</span>
+      <span style="display:flex;gap:8px"><button id="expBtn">复制全部数据</button><button id="impToggle">粘贴导入</button></span></h2>
+    <div id="impBox" class="hidden field">
+      <label for="impText">把之前复制的数据粘贴到这里（同一条记录会被覆盖）</label>
+      <textarea id="impText" spellcheck="false"></textarea>
+      <div class="actions"><span id="impMsg" class="err"></span><button class="primary" id="impBtn">导入</button></div>
+    </div>
+    <div class="note" id="ioNote">数据保存在你的账号里，只有你能看到。</div>
+  </section>
+
+  <section class="card" id="syncCard">
+    <h2><span>多端同步</span></h2>
+    <div id="syncBox"></div>
+  </section>
+</div>
+
+<!-- record editor -->
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <form class="modal" id="form">
+    <h3 id="mTitle">记录睡眠</h3>
+    <div class="trio">
+      <div class="field"><label for="fNight">哪一晚（这天晚上 → 第二天）</label><input type="date" id="fNight" required></div>
+      <div class="field"><label for="fBed">入睡</label><input type="time" id="fBed" required></div>
+      <div class="field"><label for="fUp">起床</label><input type="time" id="fUp" required></div>
+    </div>
+    <div class="durline" id="durLine"></div>
+    <div class="field"><span class="lab">睡眠质量</span>
+      <div class="choices" id="fQ">
+        <button type="button" data-v="1">1 很差</button><button type="button" data-v="2">2 较差</button><button type="button" data-v="3">3 一般</button><button type="button" data-v="4">4 不错</button><button type="button" data-v="5">5 很好</button>
+      </div></div>
+    <div class="field"><span class="lab">做梦了吗</span>
+      <div class="choices" id="fDream">
+        <button type="button" data-v="yes">做了梦</button><button type="button" data-v="no">没做梦</button><button type="button" data-v="unsure">不记得</button>
+      </div></div>
+    <div class="field" id="moodField"><span class="lab">梦的感觉</span>
+      <div class="choices mood" id="fMood">
+        <button type="button" data-v="good">好梦</button><button type="button" data-v="neutral">普通</button><button type="button" data-v="bad">噩梦</button>
+      </div></div>
+    <div class="field" id="dreamTextField"><label for="fDreamText">梦的内容</label><textarea id="fDreamText" placeholder="梦到了什么？"></textarea></div>
+    <div class="field"><label for="fNote">备注（可选）</label><textarea id="fNote" placeholder="比如：熬夜赶论文、喝了咖啡、午睡…" style="min-height:50px"></textarea></div>
+    <div class="err" id="fErr"></div>
+    <div class="actions">
+      <button type="button" class="ghost danger" id="delBtn">删除这条</button>
+      <div class="r"><button type="button" id="cancelBtn">取消</button><button type="submit" class="primary" id="saveBtn">保存</button></div>
+    </div>
+  </form>
+</div>
+
+<!-- color settings -->
+<div class="overlay" id="colorOverlay" role="dialog" aria-modal="true" aria-labelledby="cTitle">
+  <div class="modal">
+    <h3 id="cTitle">线条颜色</h3>
+    <div class="field"><span class="lab">睡眠线</span><div class="colorrow" data-key="line"></div></div>
+    <label class="toggle"><input type="checkbox" id="byDream"> 做了梦的晚上，线条用梦的颜色</label>
+    <div class="field"><span class="lab">梦的颜色</span>
+      <div class="colorrow" data-key="good"></div>
+      <div class="colorrow" data-key="bad"></div>
+      <div class="colorrow" data-key="neutral"></div>
+    </div>
+    <div class="actions"><button type="button" class="ghost" id="resetColors">恢复默认</button><button type="button" class="primary" id="closeColors">完成</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  // ================= time helpers =================
+  const DAY = 1440, AX0 = 20 * 60;
+  const pad = n => String(n).padStart(2, "0");
+  const dIdx = s => { const [y, m, d] = s.split("-").map(Number); return Math.round(Date.UTC(y, m - 1, d) / 864e5); };
+  const idxStr = i => new Date(i * 864e5).toISOString().slice(0, 10);
+  const addDays = (s, k) => idxStr(dIdx(s) + k);
+  const hm = s => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
+  const fmtHM = min => { const m = ((Math.round(min) % DAY) + DAY) % DAY; return pad(Math.floor(m / 60)) + ":" + pad(m % 60); };
+  const fmtH = min => (Math.round(min / 30) / 2) + "h";
+  const fmtLong = min => { const h = Math.floor(min / 60), m = Math.round(min % 60); return m ? `${h}小时${m}分` : `${h}小时`; };
+  const WD = ["日", "一", "二", "三", "四", "五", "六"];
+  const wdOf = s => new Date(dIdx(s) * 864e5).getUTCDay();
+  const md = s => `${Number(s.slice(5, 7))}/${Number(s.slice(8))}`;
+  const mdCN = s => `${Number(s.slice(5, 7))}月${Number(s.slice(8))}日`;
+  const nowLocal = () => { const n = new Date(); return { date: `${n.getFullYear()}-${pad(n.getMonth() + 1)}-${pad(n.getDate())}`, min: n.getHours() * 60 + n.getMinutes() }; };
+  // the night we're in (or just finished): before 20:00 it's last night
+  const currentNight = () => { const n = nowLocal(); return n.min >= AX0 ? n.date : addDays(n.date, -1); };
+  const winStart = night => dIdx(night) * DAY + AX0;
+  // A record belongs to a night D (D evening → D+1). Bed time before 20:00 means the next calendar day.
+  function span(r) {
+    const b = hm(r.bed), u = hm(r.up);
+    const s = dIdx(r.night) * DAY + b + (b < AX0 ? DAY : 0);
+    let e = Math.floor(s / DAY) * DAY + u; if (e <= s) e += DAY;
+    return { s, e };
+  }
+
+  // ================= state =================
+  const $ = id => document.getElementById(id);
+  const LS = "sleep-timeline-v2", LSUI = "sleep-timeline-ui", LSC = "sleep-timeline-colors", LST = "sleep-timeline-tombs", LSCT = "sleep-timeline-colors-at";
+  const syncChanged = () => { try { window.SleepSync && window.SleepSync.onChange && window.SleepSync.onChange(); } catch (e) {} };
+  let records = {};
+  let db = null;      // set only when this viewer can save to their own private space
+  let base = null;    // data/users/<id>/profile
+  let view = "month";
+  let focus = currentNight();
+  let editing = null;
+  const DEF_COLORS = { line: "#39a6c8", good: "#2f6fd0", bad: "#d2483c", neutral: "#9aa1ab", byDream: false };
+  let colors = { ...DEF_COLORS };
+
+  function lsGet(k, fb) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? fb : v; } catch (e) { return fb; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+  function clean(raw, id) {
+    if (!raw || typeof raw !== "object") return null;
+    if (!(/^\d{4}-\d{2}-\d{2}$/.test(raw.night) && /^\d{2}:\d{2}$/.test(raw.bed) && /^\d{2}:\d{2}$/.test(raw.up))) return null;
+    const q = Number(raw.quality);
+    return {
+      id, night: raw.night, bed: raw.bed, up: raw.up,
+      quality: q >= 1 && q <= 5 ? q : null,
+      dream: ["yes", "no", "unsure"].includes(raw.dream) ? raw.dream : null,
+      mood: ["good", "neutral", "bad"].includes(raw.mood) ? raw.mood : null,
+      dreamText: typeof raw.dreamText === "string" ? raw.dreamText.slice(0, 4000) : "",
+      note: typeof raw.note === "string" ? raw.note.slice(0, 2000) : "",
+      updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : ""
+    };
+  }
+  async function saveRecord(r) {
+    r.updatedAt = new Date().toISOString();
+    records[r.id] = r; lsSet(LS, records); syncChanged();
+    if (db) { const body = { ...r }; delete body.id; body.updatedAt = new Date().toISOString(); await guard(() => base.collection("sleeps").doc(r.id).set(body)); }
+  }
+  async function deleteRecord(id) {
+    delete records[id]; lsSet(LS, records);
+    const tombs = lsGet(LST, {}) || {}; tombs[id] = new Date().toISOString(); lsSet(LST, tombs); syncChanged();
+    if (db) await guard(() => base.collection("sleeps").doc(id).delete());
+  }
+  // A viewer who may not save (e.g. view-only access) gets invalid_argument: keep working in this browser only.
+  async function guard(fn) {
+    try { return await fn(); }
+    catch (e) {
+      if (e && e.code === "invalid_argument" || e && (e.code === "revoked" || e.code === "not_granted")) { goLocal("· 数据只保存在这个浏览器"); return; }
+      throw e;
+    }
+  }
+  function goLocal(msg) {
+    db = null; base = null; lsSet(LS, records);
+    setStatus(msg);
+    $("ioNote").textContent = "你的记录只保存在这个浏览器里，换设备或清除浏览器数据会丢失。记得定期「复制全部数据」备份。";
+  }
+  const newId = night => "n" + night.replace(/-/g, "") + "-" + Math.random().toString(36).slice(2, 7);
+
+  // ================= colors =================
+  const PRESETS = {
+    line: ["#39a6c8", "#2f6fd0", "#5b8def", "#7c6fd6", "#3f9d7a", "#e08a3c", "#e06a8f", "#4a5568"],
+    good: ["#2f6fd0", "#39a6c8", "#5b8def", "#3f9d7a"],
+    bad: ["#d2483c", "#e06a8f", "#b5462f", "#e08a3c"],
+    neutral: ["#9aa1ab", "#7a8494", "#b8bec7", "#8f8a80"]
+  };
+  const CNAME = { line: "", good: "好梦", bad: "噩梦", neutral: "普通的梦" };
+  const okHex = v => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
+  function applyColors() {
+    const r = document.documentElement.style;
+    r.setProperty("--line", colors.line); r.setProperty("--d-good", colors.good); r.setProperty("--d-bad", colors.bad); r.setProperty("--d-neutral", colors.neutral);
+    const h = colors.line; const n = parseInt(h.slice(1), 16);
+    r.setProperty("--hover", `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},.11)`);
+  }
+  function setColors(c) {
+    colors = { line: okHex(c.line) ? c.line : DEF_COLORS.line, good: okHex(c.good) ? c.good : DEF_COLORS.good, bad: okHex(c.bad) ? c.bad : DEF_COLORS.bad, neutral: okHex(c.neutral) ? c.neutral : DEF_COLORS.neutral, byDream: !!c.byDream };
+    applyColors();
+  }
+  let colorSaveT = null;
+  function persistColors() {
+    lsSet(LSC, colors); lsSet(LSCT, new Date().toISOString()); syncChanged();
+    clearTimeout(colorSaveT);
+    colorSaveT = setTimeout(async () => { if (db) { try { await guard(() => base.set({ colors })); } catch (e) {} } }, 700);
+  }
+  function renderColorPanel() {
+    document.querySelectorAll(".colorrow").forEach(row => {
+      const k = row.dataset.key;
+      row.innerHTML = (CNAME[k] ? `<span class="nm">${CNAME[k]}</span>` : "") + `<div class="sws">` +
+        PRESETS[k].map(c => `<button type="button" class="swb" style="background:${c}" data-c="${c}" aria-label="${c}" aria-pressed="${c.toLowerCase() === colors[k].toLowerCase()}"></button>`).join("") +
+        `<input type="color" value="${colors[k]}" aria-label="自定义${CNAME[k] || "睡眠线"}颜色"></div>`;
+      row.querySelectorAll(".swb").forEach(b => b.onclick = () => { colors[k] = b.dataset.c; applyColors(); persistColors(); renderColorPanel(); render(); });
+      row.querySelector("input").oninput = e => { colors[k] = e.target.value; applyColors(); persistColors(); render(); row.querySelectorAll(".swb").forEach(b => b.setAttribute("aria-pressed", "false")); };
+    });
+    $("byDream").checked = colors.byDream;
+  }
+  $("byDream").onchange = e => { colors.byDream = e.target.checked; persistColors(); render(); };
+  $("colorBtn").onclick = () => { renderColorPanel(); $("colorOverlay").classList.add("open"); };
+  $("closeColors").onclick = () => $("colorOverlay").classList.remove("open");
+  $("resetColors").onclick = () => { setColors(DEF_COLORS); persistColors(); renderColorPanel(); render(); };
+  $("colorOverlay").addEventListener("mousedown", e => { if (e.target === $("colorOverlay")) $("colorOverlay").classList.remove("open"); });
+  const moodVar = m => m === "good" ? "var(--d-good)" : m === "bad" ? "var(--d-bad)" : "var(--d-neutral)";
+  const segColor = r => (colors.byDream && r.dream === "yes" && r.mood) ? moodVar(r.mood) : "var(--line)";
+
+  // ================= ranges =================
+  // A "period" is a list of nights. Week/month/year membership is by the morning the night ends on,
+  // so a month reads 9/30 → 10/1 … 10/30 → 10/31, the same as a notebook page.
+  function nightsBetween(firstMorning, lastMorning) { const out = []; for (let i = dIdx(firstMorning); i <= dIdx(lastMorning); i++) out.push(idxStr(i - 1)); return out; }
+  function monthOf(s) { return s.slice(0, 7); }
+  function lastDayOf(ym) { const [y, m] = ym.split("-").map(Number); return `${ym}-${pad(new Date(Date.UTC(y, m, 0)).getUTCDate())}`; }
+  function getRange() {
+    if (view === "day") return { nights: [focus], key: "day-" + focus, label: `${md(focus)} → ${md(addDays(focus, 1))}` };
+    if (view === "week") {
+      const morning = addDays(focus, 1); const wd = (wdOf(morning) + 6) % 7; // Monday = 0
+      const mon = addDays(morning, -wd), sun = addDays(mon, 6);
+      return { nights: nightsBetween(mon, sun), key: "week-" + mon, label: `${md(mon)} – ${md(sun)} 早上`, mon, sun };
+    }
+    if (view === "month") {
+      const ym = monthOf(addDays(focus, 1));
+      const [y, m] = ym.split("-").map(Number);
+      return { nights: nightsBetween(ym + "-01", lastDayOf(ym)), key: "month-" + ym, label: `${y}年${m}月`, ym };
+    }
+    const y = addDays(focus, 1).slice(0, 4);
+    return { nights: nightsBetween(y + "-01-01", y + "-12-31"), key: "year-" + y, label: `${y}年`, year: y };
+  }
+  function shift(dir) {
+    if (view === "day") focus = addDays(focus, dir);
+    else if (view === "week") focus = addDays(focus, 7 * dir);
+    else if (view === "month") { const m = addDays(focus, 1); const [y, mo] = m.split("-").map(Number); const d = new Date(Date.UTC(y, mo - 1 + dir, 1)); focus = addDays(d.toISOString().slice(0, 10), 14); }
+    else { const y = Number(addDays(focus, 1).slice(0, 4)) + dir; focus = `${y}-07-01`; }
+    render();
+  }
+
+  // ================= stats =================
+  function statsFor(nights) {
+    const set = new Set(nights);
+    const list = Object.values(records).filter(r => set.has(r.night));
+    const byNight = {};
+    list.forEach(r => (byNight[r.night] = byNight[r.night] || []).push(r));
+    const keys = Object.keys(byNight).sort();
+    const totals = [], beds = [], ups = [];
+    keys.forEach(n => {
+      let tot = 0, main = null, md0 = -1;
+      byNight[n].forEach(r => { const { s, e } = span(r); tot += e - s; if (e - s > md0) { md0 = e - s; main = r; } });
+      totals.push(tot);
+      const sp = span(main), ws = winStart(n);
+      beds.push(sp.s - ws); ups.push(sp.e - ws);
+    });
+    const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const sd = a => { const m = mean(a); return Math.sqrt(mean(a.map(x => (x - m) ** 2))); };
+    const qs = list.map(r => r.quality).filter(Boolean);
+    const dreams = list.filter(r => r.dream === "yes");
+    return {
+      n: keys.length, list, byNight,
+      avgDur: totals.length ? mean(totals) : null, minDur: totals.length ? Math.min(...totals) : null, maxDur: totals.length ? Math.max(...totals) : null,
+      avgBed: beds.length ? mean(beds) : null, avgUp: ups.length ? mean(ups) : null,
+      sdBed: beds.length > 1 ? sd(beds) : null, sdUp: ups.length > 1 ? sd(ups) : null,
+      avgQ: qs.length ? mean(qs) : null, nQ: qs.length,
+      dreamN: dreams.length, good: dreams.filter(r => r.mood === "good").length, bad: dreams.filter(r => r.mood === "bad").length, neutral: dreams.filter(r => r.mood === "neutral").length
+    };
+  }
+  function renderStats(st, range) {
+    const tile = (k, v, s) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s || "&nbsp;"}</div></div>`;
+    const dash = "—";
+    if (view === "day") {
+      const t = st.list.reduce((a, r) => { const { s, e } = span(r); return a + e - s; }, 0);
+      const main = st.list.slice().sort((a, b) => { const A = span(a), B = span(b); return (B.e - B.s) - (A.e - A.s); })[0];
+      $("stats").innerHTML = [
+        tile("这一晚共睡", st.n ? fmtH(t) : dash, st.n ? fmtLong(t) + (st.list.length > 1 ? `（${st.list.length} 段）` : "") : "还没有记录"),
+        tile("入睡", main ? main.bed : dash, main ? (span(main).s >= dIdx(focus) * DAY + DAY ? md(addDays(focus, 1)) : md(focus)) : ""),
+        tile("起床", main ? main.up : dash, main ? md(idxStr(Math.floor(span(main).e / DAY))) : ""),
+        tile("质量", st.avgQ != null ? `${Math.round(st.avgQ)}<small> / 5</small>` : dash, ""),
+        tile("梦", st.dreamN ? ({ good: "好梦", bad: "噩梦", neutral: "普通" })[st.list.find(r => r.dream === "yes").mood] || "做了梦" : (st.list.some(r => r.dream === "no") ? "没做梦" : dash), "")
+      ].join("");
+      return;
+    }
+    const unit = { week: "这周", month: "这个月", year: "这一年" }[view];
+    $("stats").innerHTML = [
+      tile("平均睡眠", st.avgDur != null ? fmtH(st.avgDur) : dash, st.n ? `记录 ${st.n} 晚 · 最短 ${fmtH(st.minDur)} / 最长 ${fmtH(st.maxDur)}` : `${unit}还没有记录`),
+      tile("平均入睡", st.avgBed != null ? fmtHM(st.avgBed + AX0) : dash, st.sdBed != null ? `波动 ±${(st.sdBed / 60).toFixed(1)}h` : ""),
+      tile("平均起床", st.avgUp != null ? fmtHM(st.avgUp + AX0) : dash, st.sdUp != null ? `波动 ±${(st.sdUp / 60).toFixed(1)}h` : ""),
+      tile("平均质量", st.avgQ != null ? st.avgQ.toFixed(1) + "<small> / 5</small>" : dash, st.nQ ? `${st.nQ} 晚有评分` : "还没有评分"),
+      tile("做梦", st.dreamN ? st.dreamN + "<small> 次</small>" : dash, st.dreamN ? `好梦 ${st.good} · 噩梦 ${st.bad} · 普通 ${st.neutral}` : "")
+    ].join("");
+  }
+
+  // ================= drawing =================
+  function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  const moonSVG = c => `<svg class="moon" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2a6 6 0 1 0 3 9A5 5 0 0 1 11 2z" fill="${c}"/></svg>`;
+  const MOOD = { good: "好梦", bad: "噩梦", neutral: "普通的梦" };
+  function axisHTML(sideHead) {
+    let t = ""; for (let i = 0; i < 24; i++) { let h = (20 + i) % 24; if (h === 0) h = 24; t += `<span style="left:${(i / 24) * 100}%">${h}</span>`; }
+    return `<div class="axis"><div></div><div class="ticks">${t}</div><div class="sidehead">${sideHead}</div></div>`;
+  }
+  function tipOf(r) {
+    const { s, e } = span(r);
+    return `${md(idxStr(Math.floor(s / DAY)))} ${r.bed} 入睡 → ${md(idxStr(Math.floor(e / DAY)))} ${r.up} 起床 ｜ ${fmtLong(e - s)}` + (r.quality ? ` ｜ 质量 ${r.quality}/5` : "") + (r.dream === "yes" ? ` ｜ ${MOOD[r.mood] || "做了梦"}` : r.dream === "no" ? " ｜ 没做梦" : "");
+  }
+  // segments of all records that overlap night's window. Label goes on the longest piece of each record.
+  function segsFor(night) {
+    const ws = winStart(night), we = ws + DAY;
+    let out = "";
+    Object.values(records).forEach(r => {
+      const { s, e } = span(r);
+      if (e <= ws || s >= we) return;
+      const a = Math.max(s, ws), b = Math.min(e, we);
+      const before = Math.max(0, Math.min(e, ws) - s), after = Math.max(0, e - Math.max(s, we));
+      const mine = (b - a) >= before && (b - a) >= after;
+      const cls = ["seg"]; if (s < ws) cls.push("cutL"); if (e > we) cls.push("cutR");
+      const tip = tipOf(r);
+      out += `<div class="${cls.join(" ")}" style="left:${(a - ws) / DAY * 100}%;width:${(b - a) / DAY * 100}%;color:${segColor(r)}" data-id="${esc(r.id)}" title="${esc(tip)}" tabindex="0" role="button" aria-label="${esc(tip)}">${mine ? `<span class="lb">${fmtH(e - s)}</span>` : ""}</div>`;
+    });
+    const n = nowLocal(); const nowAbs = dIdx(n.date) * DAY + n.min;
+    if (nowAbs >= ws && nowAbs < we) out += `<div class="nowline" style="left:${(nowAbs - ws) / DAY * 100}%" title="现在"></div>`;
+    return out;
+  }
+  function sideFor(night) {
+    const own = Object.values(records).filter(r => r.night === night);
+    let side = "";
+    const q = own.map(r => r.quality).filter(Boolean);
+    if (q.length) { const qv = Math.round(q.reduce((x, y) => x + y, 0) / q.length); side += `<span class="pips" title="质量 ${qv}/5">${[1, 2, 3, 4, 5].map(k => `<b class="${k <= qv ? "on" : ""}"></b>`).join("")}</span>`; }
+    const dr = own.find(r => r.dream === "yes");
+    if (dr) side += `<span title="${esc((MOOD[dr.mood] || "做了梦") + (dr.dreamText ? "：" + dr.dreamText : ""))}">${moonSVG(moodVar(dr.mood))}</span>`;
+    return side;
+  }
+  function dateLabel(date, full, extraCls) {
+    const wd = wdOf(date), today = nowLocal().date;
+    const txt = full || Number(date.slice(8)) === 1 ? md(date) : String(Number(date.slice(8)));
+    const cls = ["dl"]; if (wd === 0 || wd === 6) cls.push("we"); if (date === today) cls.push("today"); if (extraCls) cls.push(extraCls);
+    return `<span class="${cls.join(" ")}" data-goto="${date}" tabindex="0" title="${mdCN(date)}">${txt}<i>${WD[wd]}</i></span>`;
+  }
+
+  function renderRows(range, st) {
+    const full = view === "week";
+    let html = `<div class="tl-scroll"><div class="tl">` + axisHTML("质量 · 梦") + `<div class="rows">`;
+    range.nights.forEach((n, i) => {
+      html += `<div class="row" data-night="${n}" tabindex="0" aria-label="${mdCN(n)}晚 → ${mdCN(addDays(n, 1))}，添加记录">
+        <div class="lcol">${dateLabel(n, full || i === 0)}<span class="brace"></span></div>
+        <div class="track">${segsFor(n)}</div><div class="side">${sideFor(n)}</div></div>`;
+    });
+    const last = addDays(range.nights[range.nights.length - 1], 1);
+    html += `<div class="lcol" style="height:0">${dateLabel(last, full || true)}</div>`;
+    const pos = off => `calc(var(--lab) + (100% - var(--lab) - var(--side)) * ${Math.min(off, DAY) / DAY})`;
+    if (st.avgBed != null) html += `<div class="avgline" style="left:${pos(st.avgBed)}"><span>平均入睡 ${fmtHM(st.avgBed + AX0)}</span></div>`;
+    if (st.avgUp != null) html += `<div class="avgline" style="left:${pos(st.avgUp)}"><span>平均起床 ${fmtHM(st.avgUp + AX0)}</span></div>`;
+    html += `</div></div></div>`;
+    if (!st.n) html += `<div class="empty">这段时间还没有记录。点两个日期之间的那一行，就是给那一晚添加记录。</div>`;
+    return html;
+  }
+
+  function renderDay(range, st) {
+    const n = focus, m = addDays(n, 1);
+    let html = `<div class="dayhead"><div class="big">${md(n)}<i> 周${WD[wdOf(n)]} 晚</i> → ${md(m)}<i> 周${WD[wdOf(m)]}</i></div>
+      <button class="primary" id="dayAdd">＋ 给这一晚加记录</button></div>`;
+    html += `<div class="tl-scroll daytrack"><div class="tl">` + axisHTML("") +
+      `<div class="rows"><div class="row" data-night="${n}" tabindex="0"><div class="lcol">${dateLabel(n, true)}<span class="brace"></span></div><div class="track">${segsFor(n)}</div><div class="side">${sideFor(n)}</div></div>
+      <div class="lcol" style="height:0">${dateLabel(m, true)}</div></div></div></div>`;
+    const own = st.list.slice().sort((a, b) => span(a).s - span(b).s);
+    if (!own.length) html += `<div class="empty">这一晚还没有记录。</div>`;
+    else {
+      html += `<div class="recs">` + own.map(r => {
+        const { s, e } = span(r);
+        const chips = [];
+        if (r.quality) chips.push(`<span>质量 <b style="color:var(--ink)">${r.quality}</b>/5</span>`);
+        if (r.dream === "yes") chips.push(`<span class="chip" style="background:${moodVar(r.mood)}">${MOOD[r.mood] || "做了梦"}</span>`);
+        else if (r.dream === "no") chips.push("<span>没做梦</span>"); else if (r.dream === "unsure") chips.push("<span>不记得有没有做梦</span>");
+        return `<div class="rec" data-id="${esc(r.id)}" tabindex="0" role="button" style="border-left-color:${segColor(r)}">
+          <div class="t">${md(idxStr(Math.floor(s / DAY)))} <b>${r.bed}</b> 入睡 → ${md(idxStr(Math.floor(e / DAY)))} <b>${r.up}</b> 起床 · ${fmtLong(e - s)}</div>
+          ${chips.length ? `<div class="meta">${chips.join("")}</div>` : ""}
+          ${r.dream === "yes" && r.dreamText ? `<div class="dream">${esc(r.dreamText)}</div>` : ""}
+          ${r.note ? `<div class="nt">备注：${esc(r.note)}</div>` : ""}
+        </div>`;
+      }).join("") + `</div>`;
+    }
+    return html;
+  }
+
+  function renderYear(range) {
+    const y = range.year;
+    let html = `<div class="tl-scroll"><div class="tl">` + axisHTML("晚数 · 梦") + `<div class="rows yearrows">`;
+    const monthsStats = [];
+    for (let m = 1; m <= 12; m++) {
+      const ym = `${y}-${pad(m)}`;
+      const st = statsFor(nightsBetween(ym + "-01", lastDayOf(ym)));
+      monthsStats.push(st);
+      let segs = "", side = "";
+      if (st.n) {
+        const clamp = v => Math.max(0, Math.min(DAY, v));
+        const a = clamp(st.avgBed), b = clamp(st.avgUp);
+        if (st.sdBed != null) { const ba = clamp(st.avgBed - st.sdBed), bb = clamp(st.avgUp + (st.sdUp || 0)); segs += `<div class="seg band" style="left:${ba / DAY * 100}%;width:${(bb - ba) / DAY * 100}%;color:var(--line)"></div>`; }
+        const tip = `${m}月：平均 ${fmtHM(st.avgBed + AX0)} 入睡 → ${fmtHM(st.avgUp + AX0)} 起床，平均睡 ${fmtLong(st.avgDur)}，${st.n} 晚有记录` + (st.avgQ != null ? `，平均质量 ${st.avgQ.toFixed(1)}` : "");
+        segs += `<div class="seg" style="left:${a / DAY * 100}%;width:${Math.max(0.5, (b - a) / DAY * 100)}%;color:var(--line)" title="${esc(tip)}" data-month="${ym}" tabindex="0" role="button" aria-label="${esc(tip)}"><span class="lb">${fmtH(st.avgDur)}</span></div>`;
+        side = `<span class="cnt">${st.n}晚</span>` + (st.dreamN ? `<span title="好梦 ${st.good} · 噩梦 ${st.bad} · 普通 ${st.neutral}">${moonSVG(st.bad > st.good ? "var(--d-bad)" : st.good ? "var(--d-good)" : "var(--d-neutral)")}</span>` : "");
+      }
+      html += `<div class="row" data-month="${ym}" tabindex="0" aria-label="${m}月，打开月视图"><div class="ylab">${m}月</div><div class="track">${segs}</div><div class="side">${side}</div></div>`;
+    }
+    html += `</div></div></div>`;
+    html += `<div class="note" style="margin-top:-14px">每行是这个月的平均作息：深色是平均入睡 → 平均起床，浅色是入睡/起床时间的波动范围。点一行进入那个月。</div>`;
+    // heatmap: by the morning date, cell = night ending that morning
+    html += `<div class="heat-wrap"><div class="heat"><div></div>`;
+    for (let d = 1; d <= 31; d++) html += `<div class="hd">${d}</div>`;
+    for (let m = 1; m <= 12; m++) {
+      const ym = `${y}-${pad(m)}`, last = Number(lastDayOf(ym).slice(8));
+      html += `<div class="ml">${m}月</div>`;
+      for (let d = 1; d <= 31; d++) {
+        if (d > last) { html += `<div class="cell none"></div>`; continue; }
+        const morning = `${ym}-${pad(d)}`, night = addDays(morning, -1);
+        const rs = Object.values(records).filter(r => r.night === night);
+        if (!rs.length) { html += `<div class="cell" data-night="${night}" title="${mdCN(night)}晚 → ${mdCN(morning)}：无记录" tabindex="0"></div>`; continue; }
+        const tot = rs.reduce((a, r) => { const { s, e } = span(r); return a + e - s; }, 0);
+        const op = tot < 300 ? .3 : tot < 420 ? .55 : tot < 540 ? .8 : 1;
+        const dr = rs.find(r => r.dream === "yes");
+        html += `<div class="cell has" data-night="${night}" tabindex="0" style="background:color-mix(in srgb, var(--line) ${op * 100}%, var(--card))" title="${mdCN(night)}晚 → ${mdCN(morning)}：${fmtLong(tot)}${dr ? "，" + (MOOD[dr.mood] || "做了梦") : ""}">${dr ? `<span class="dm" style="background:${moodVar(dr.mood)}"></span>` : ""}</div>`;
+      }
+    }
+    html += `</div></div>`;
+    return html;
+  }
+
+  function renderLegend() {
+    let h = `<span class="sw"><span class="bar" style="background:var(--line)"></span>睡眠</span>`;
+    if (colors.byDream) h += `<span class="sw"><span class="bar" style="background:var(--d-good)"></span><span class="bar" style="background:var(--d-bad)"></span><span class="bar" style="background:var(--d-neutral)"></span>做了梦的晚上按梦上色</span>`;
+    if (view === "week" || view === "month") h += `<span class="sw"><svg width="22" height="12"><line x1="2" y1="1" x2="2" y2="11" stroke="var(--muted)" stroke-dasharray="3 2" stroke-width="1.5"/></svg>平均入睡 / 起床</span>`;
+    if (view !== "year") h += `<span class="sw"><span class="pips"><b class="on"></b><b class="on"></b><b class="on"></b><b></b><b></b></span>睡眠质量</span>`;
+    else h += `<span class="sw">格子颜色越深 = 睡得越久（&lt;5h · 5–7h · 7–9h · 9h+）</span>`;
+    h += `<span class="sw">${moonSVG("var(--d-good)")}好梦</span><span class="sw">${moonSVG("var(--d-bad)")}噩梦</span><span class="sw">${moonSVG("var(--d-neutral)")}普通的梦</span>`;
+    $("legend").innerHTML = h;
+  }
+
+  function render() {
+    const range = getRange();
+    const st = statsFor(range.nights);
+    document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === view)));
+    $("rangeLabel").textContent = range.label;
+    renderStats(st, range);
+    const titles = { day: "这一晚", week: "一周时间轴", month: "一个月时间轴", year: "全年概览" };
+    const hints = { day: "点线段或下面的卡片可以修改", week: "两个日期之间的那一行 = 那一晚。点空白处添加，点线段修改，点日期看那一晚", month: "两个日期之间的那一行 = 那一晚。点空白处添加，点线段修改，点日期看那一晚", year: "点一行或一个格子可以跳过去看" };
+    $("mainTitle").textContent = titles[view]; $("mainHint").textContent = hints[view];
+    $("main").innerHTML = view === "day" ? renderDay(range, st) : view === "year" ? renderYear(range) : renderRows(range, st);
+    renderLegend();
+    $("aiRange").textContent = view === "day" ? "" : range.label;
+    $("aiCard").classList.toggle("hidden", view === "day");
+    loadSummary(range);
+    lsSet(LSUI, { view });
+  }
+
+  // ================= interactions =================
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { view = b.dataset.view; render(); });
+  $("prevBtn").onclick = () => shift(-1);
+  $("nextBtn").onclick = () => shift(1);
+  $("todayBtn").onclick = () => { focus = currentNight(); render(); };
+  $("addBtn").onclick = () => openEditor(null, view === "day" ? focus : currentNight());
+  function activate(t) {
+    const go = t.closest("[data-goto]");
+    if (go) { focus = go.dataset.goto; view = "day"; render(); return true; }
+    const add = t.closest("#dayAdd"); if (add) { openEditor(null, focus); return true; }
+    const seg = t.closest(".seg[data-id]"); if (seg) { openEditor(seg.dataset.id); return true; }
+    const rec = t.closest(".rec"); if (rec) { openEditor(rec.dataset.id); return true; }
+    const mo = t.closest("[data-month]"); if (mo) { focus = addDays(mo.dataset.month + "-01", 13); view = "month"; render(); return true; }
+    const cell = t.closest(".cell[data-night]"); if (cell) { focus = cell.dataset.night; view = "day"; render(); return true; }
+    const row = t.closest(".row[data-night]"); if (row) { openEditor(null, row.dataset.night); return true; }
+    return false;
+  }
+  $("main").addEventListener("click", e => activate(e.target));
+  $("main").addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && activate(e.target)) e.preventDefault(); });
+
+  // ================= editor =================
+  const fState = { quality: null, dream: null, mood: null };
+  function setChoice(g, k, v) {
+    fState[k] = v;
+    $(g).querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === String(v))));
+    if (k === "dream") { const show = v === "yes"; $("moodField").classList.toggle("hidden", !show); $("dreamTextField").classList.toggle("hidden", !show); }
+  }
+  [["fQ", "quality"], ["fDream", "dream"], ["fMood", "mood"]].forEach(([g, k]) => {
+    $(g).addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; let v = b.dataset.v; if (k === "quality") v = Number(v); setChoice(g, k, fState[k] === v ? null : v); });
+  });
+  function updateDur() {
+    const n = $("fNight").value, b = $("fBed").value, u = $("fUp").value;
+    if (!n) { $("durLine").textContent = ""; return; }
+    if (!b || !u) { $("durLine").textContent = `${mdCN(n)}晚上 → ${mdCN(addDays(n, 1))}`; return; }
+    const { s, e } = span({ night: n, bed: b, up: u });
+    $("durLine").innerHTML = `${md(idxStr(Math.floor(s / DAY)))} ${b} 入睡 → ${md(idxStr(Math.floor(e / DAY)))} ${u} 起床，共 <b>${fmtLong(e - s)}</b>`;
+  }
+  ["fNight", "fBed", "fUp"].forEach(id => $(id).addEventListener("input", updateDur));
+  function openEditor(id, night) {
+    const r = id ? records[id] : null;
+    editing = r ? r.id : null;
+    $("mTitle").textContent = r ? "修改睡眠记录" : "记录睡眠";
+    $("fNight").value = r ? r.night : night;
+    $("fBed").value = r ? r.bed : ""; $("fUp").value = r ? r.up : "";
+    $("fDreamText").value = r ? r.dreamText : ""; $("fNote").value = r ? r.note : "";
+    setChoice("fQ", "quality", r ? r.quality : null);
+    setChoice("fDream", "dream", r ? r.dream : null);
+    setChoice("fMood", "mood", r ? r.mood : null);
+    $("delBtn").classList.toggle("hidden", !r);
+    $("delBtn").dataset.confirm = ""; $("delBtn").textContent = "删除这条";
+    $("fErr").textContent = "";
+    updateDur();
+    $("overlay").classList.add("open");
+    setTimeout(() => (r ? $("fNight") : $("fBed")).focus(), 30);
+  }
+  function closeEditor() { $("overlay").classList.remove("open"); editing = null; }
+  $("cancelBtn").onclick = closeEditor;
+  $("overlay").addEventListener("mousedown", e => { if (e.target === $("overlay")) closeEditor(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { closeEditor(); $("colorOverlay").classList.remove("open"); } });
+  $("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const n = $("fNight").value, b = $("fBed").value, u = $("fUp").value;
+    if (!n || !b || !u) { $("fErr").textContent = "请填写哪一晚、入睡和起床时间。"; return; }
+    if (b === u) { $("fErr").textContent = "入睡和起床时间不能相同。"; return; }
+    const r = { id: editing || newId(n), night: n, bed: b, up: u, quality: fState.quality, dream: fState.dream,
+      mood: fState.dream === "yes" ? fState.mood : null, dreamText: fState.dream === "yes" ? $("fDreamText").value.trim() : "", note: $("fNote").value.trim() };
+    $("saveBtn").disabled = true;
+    try {
+      await saveRecord(r);
+      if (!getRange().nights.includes(n)) focus = n;
+      closeEditor(); render();
+    } catch (err) { $("fErr").textContent = "同步失败：" + ((err && err.message) || "请稍后再试") + "（已暂存在这个浏览器）"; render(); }
+    finally { $("saveBtn").disabled = false; }
+  });
+  $("delBtn").onclick = async () => {
+    if (!editing) return;
+    if ($("delBtn").dataset.confirm !== "1") { $("delBtn").dataset.confirm = "1"; $("delBtn").textContent = "再点一次确认删除"; return; }
+    try { await deleteRecord(editing); closeEditor(); render(); } catch (err) { $("fErr").textContent = "删除失败，请稍后再试。"; }
+  };
+
+  // ================= AI summary =================
+  let sample = null; const summaryCache = {};
+  function mdToHtml(t) {
+    const lines = esc(t).split("\n"); let out = "", inList = false;
+    const inline = s => s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    lines.forEach(l => {
+      const L = l.trim();
+      if (/^[-*•]\s+/.test(L)) { if (!inList) { out += "<ul>"; inList = true; } out += `<li>${inline(L.replace(/^[-*•]\s+/, ""))}</li>`; return; }
+      if (inList) { out += "</ul>"; inList = false; }
+      if (/^#{1,4}\s+/.test(L)) out += `<h4>${inline(L.replace(/^#{1,4}\s+/, ""))}</h4>`; else if (L) out += `<p>${inline(L)}</p>`;
+    });
+    if (inList) out += "</ul>";
+    return out;
+  }
+  const DREAM = { yes: "做了梦", no: "没做梦", unsure: "不记得" };
+  function recLine(r) {
+    const { s, e } = span(r);
+    let x = `${md(r.night)}晚（周${WD[wdOf(r.night)]}）：${md(idxStr(Math.floor(s / DAY)))} ${r.bed} 入睡 → ${md(idxStr(Math.floor(e / DAY)))} ${r.up} 起床，${fmtLong(e - s)}`;
+    x += r.quality ? `，质量 ${r.quality}/5` : "，质量未记录";
+    if (r.dream) x += `，${DREAM[r.dream]}`;
+    if (r.dream === "yes" && r.mood) x += `（${MOOD[r.mood]}）`;
+    if (r.dream === "yes" && r.dreamText) x += `，梦：「${r.dreamText.slice(0, view === "year" ? 80 : 400)}」`;
+    if (r.note) x += `，备注：${r.note.slice(0, 200)}`;
+    return "- " + x;
+  }
+  function sumLine(st) {
+    return `记录 ${st.n} 晚；平均睡眠 ${fmtLong(st.avgDur)}（最短 ${fmtLong(st.minDur)}，最长 ${fmtLong(st.maxDur)}）；平均入睡 ${fmtHM(st.avgBed + AX0)}（波动 ±${st.sdBed != null ? (st.sdBed / 60).toFixed(1) : "?"}h）；平均起床 ${fmtHM(st.avgUp + AX0)}（波动 ±${st.sdUp != null ? (st.sdUp / 60).toFixed(1) : "?"}h）；平均质量 ${st.avgQ != null ? st.avgQ.toFixed(1) + "/5（" + st.nQ + " 晚有评分）" : "无评分"}；做梦 ${st.dreamN} 次（好梦 ${st.good}，噩梦 ${st.bad}，普通 ${st.neutral}）`;
+  }
+  function buildPrompt(range, st) {
+    const unit = { week: "这一周", month: "这个月", year: "这一年" }[view];
+    let data = "";
+    if (view === "year") {
+      for (let m = 1; m <= 12; m++) { const ym = `${range.year}-${pad(m)}`; const ms = statsFor(nightsBetween(ym + "-01", lastDayOf(ym))); if (ms.n) data += `- ${m}月：${sumLine(ms)}\n`; }
+      data = "按月汇总：\n" + data + "\n逐晚记录：\n" + st.list.slice().sort((a, b) => span(a).s - span(b).s).map(recLine).join("\n");
+    } else data = "逐晚记录：\n" + st.list.slice().sort((a, b) => span(a).s - span(b).s).map(recLine).join("\n");
+    return `你是一位温和、具体、不说教的睡眠记录助手。下面是一位大学生${unit}（${range.label}）的睡眠日记。每条记录以"某日晚 → 第二天"为单位；常有过了零点才睡的情况，日期已经标清楚。请用简体中文写一份睡眠总结。
+
+要求：
+- 用这几个小标题（以 "## " 开头）：概况、作息规律、时长与质量、梦、建议
+- 只根据下面的数据说话，引用具体日期和数字；数据缺失（比如没评分）就直说"记录不足"，不要编造
+- "作息规律"：入睡/起床时间的漂移趋势（是否越睡越晚、有无昼夜颠倒、连续熬夜的时段），点出特别反常的几晚${view === "year" ? "；比较不同月份的变化" : ""}
+- "时长与质量"：睡得长短、入睡早晚和质量评分有没有关联
+- "梦"：做梦频率；好梦和噩梦是否和睡眠时长、入睡时间或备注有关；梦的内容里反复出现的主题（如果有）
+- "建议"：2–3 条具体、可执行、适合学生作息的小建议，用 "- " 列表
+- 总长度 ${view === "year" ? "450–650" : "350–500"} 字。语气像朋友，不做医学诊断；如果有严重睡眠不足的迹象，温和地建议必要时咨询医生
+
+汇总：${sumLine(st)}
+
+${data}`;
+  }
+  const emptyAI = () => `<p class="ai-empty">点「生成总结」，Claude 会读${view === "week" ? "这一周" : view === "month" ? "这个月" : "这一年"}的记录，帮你看作息规律、睡眠时长和质量的关系、梦的情况，并给出几条建议。</p>`;
+  async function loadSummary(range) {
+    if (view === "day") return;
+    const key = range.key;
+    const show = c => { $("aiOut").innerHTML = mdToHtml(c.text); $("aiMeta").textContent = "上次生成于 " + new Date(c.at).toLocaleString("zh-CN", { hour12: false }) + " · 仅供参考，不是医疗建议"; $("aiBtn").textContent = "重新生成"; };
+    if (summaryCache[key]) { show(summaryCache[key]); return; }
+    $("aiOut").innerHTML = emptyAI(); $("aiMeta").textContent = ""; $("aiBtn").textContent = "生成总结";
+    if (db) {
+      try { const snap = await base.collection("summaries").doc(key).get(); if (snap.exists && getRange().key === key) { const d = snap.data(); if (typeof d.text === "string") { summaryCache[key] = { text: d.text, at: d.at }; show(summaryCache[key]); } } } catch (e) {}
+    }
+  }
+  function offerCopy(range, st, why) {
+    const prompt = buildPrompt(range, st);
+    $("aiOut").innerHTML = `<p class="ai-empty">${esc(why)}可以复制下面这段提示词（已经包含你的睡眠数据），粘贴到 Claude 或其他 AI 对话里，就能得到同样的总结。</p>
+      <div class="actions" style="justify-content:flex-start;margin:8px 0"><button class="primary" id="copyPrompt">复制 AI 提示词</button><span class="note" id="copyMsg"></span></div>
+      <textarea id="promptBox" readonly style="min-height:140px;font-size:12px">${esc(prompt)}</textarea>`;
+    $("copyPrompt").onclick = async () => {
+      try { await navigator.clipboard.writeText(prompt); $("copyMsg").textContent = "已复制"; }
+      catch (e) { $("promptBox").select(); $("copyMsg").textContent = "请手动全选复制下面的文字"; }
+    };
+  }
+  let aiBusy = false;
+  $("aiBtn").onclick = async () => {
+    if (aiBusy) return;
+    const range = getRange(), st = statsFor(range.nights), key = range.key;
+    if (st.n < 3) { $("aiOut").innerHTML = `<p class="ai-empty">这段时间的记录少于 3 晚，先多记几天再来总结吧。</p>`; return; }
+    if (!sample) { offerCopy(range, st, "这里没法直接调用 AI。"); return; }
+    aiBusy = true; $("aiBtn").disabled = true; $("aiBtn").textContent = "生成中…";
+    $("aiOut").innerHTML = `<p class="ai-empty">Claude 正在读你的睡眠记录…</p>`; $("aiMeta").textContent = "";
+    try {
+      const res = await sample(buildPrompt(range, st), { cache: false, modelTier: view === "year" ? "complex" : "default",
+        onText: ({ text }) => { if (text && getRange().key === key) $("aiOut").innerHTML = mdToHtml(text); } });
+      const c = { text: res.text || "", at: new Date().toISOString() };
+      summaryCache[key] = c;
+      if (getRange().key === key) { $("aiOut").innerHTML = mdToHtml(c.text); $("aiMeta").textContent = "生成于 " + new Date(c.at).toLocaleString("zh-CN", { hour12: false }) + " · 仅供参考，不是医疗建议"; }
+      if (db) { try { await guard(() => base.collection("summaries").doc(key).set(c)); } catch (e) {} }
+    } catch (err) {
+      const code = err && err.code;
+      if (code === "not_granted" || code === "capability_disabled") { offerCopy(range, st, "这个页面没有使用 Claude 的权限。"); return; }
+      const msg = code === "rate_limited" ? "请求太频繁了，过一会儿再试。" : "生成失败：" + ((err && err.message) || "请稍后再试");
+      $("aiOut").innerHTML = (err && err.text ? mdToHtml(err.text) : "") + `<p class="ai-empty">${esc(msg)}</p>`;
+    } finally { aiBusy = false; $("aiBtn").disabled = false; $("aiBtn").textContent = "重新生成"; }
+  };
+
+  // ================= export / import =================
+  $("expBtn").onclick = async () => {
+    const data = JSON.stringify(Object.values(records).sort((a, b) => a.night.localeCompare(b.night)));
+    try { await navigator.clipboard.writeText(data); $("ioNote").textContent = `已复制 ${Object.keys(records).length} 条记录，可以粘贴到备忘录里保存。`; }
+    catch (e) { $("impBox").classList.remove("hidden"); $("impText").value = data; $("impText").select(); $("ioNote").textContent = "浏览器不让自动复制，数据已放进下面的框里，请手动复制。"; }
+  };
+  $("impToggle").onclick = () => $("impBox").classList.toggle("hidden");
+  $("impBtn").onclick = async () => {
+    let arr; try { arr = JSON.parse($("impText").value); } catch (e) { $("impMsg").textContent = "格式不对，请粘贴「复制全部数据」得到的内容。"; return; }
+    if (!Array.isArray(arr)) { $("impMsg").textContent = "格式不对。"; return; }
+    let n = 0; $("impBtn").disabled = true;
+    for (const raw of arr) {
+      const id = raw && typeof raw.id === "string" && /^[A-Za-z0-9_\-]{1,80}$/.test(raw.id) ? raw.id : newId((raw && raw.night) || "x");
+      const r = clean(raw, id); if (r) { try { await saveRecord(r); n++; } catch (e) {} }
+    }
+    $("impBtn").disabled = false; $("impMsg").textContent = `导入了 ${n} 条。`; render();
+  };
+
+  // ================= sync bridge (used by sync.js) =================
+  window.SleepSync = {
+    snapshot: () => ({ records: JSON.parse(JSON.stringify(records)), tombs: lsGet(LST, {}) || {}, colors: { ...colors }, colorsAt: lsGet(LSCT, "") || "" }),
+    apply: st => {
+      const next = {};
+      Object.entries(st.records || {}).forEach(([id, raw]) => { const r = clean(raw, id); if (r) next[id] = r; });
+      records = next; lsSet(LS, records); lsSet(LST, st.tombs || {});
+      if (st.colors && typeof st.colors === "object") { setColors(st.colors); lsSet(LSC, colors); lsSet(LSCT, st.colorsAt || ""); }
+      if (!$("overlay").classList.contains("open")) render();
+    },
+    onChange: null
+  };
+
+  // ================= boot =================
+  Object.entries(lsGet(LS, {}) || {}).forEach(([id, raw]) => { const r = clean(raw, id); if (r) records[id] = r; });
+  const ui = lsGet(LSUI, {}); if (ui && ["day", "week", "month", "year"].includes(ui.view)) view = ui.view;
+  setColors(lsGet(LSC, DEF_COLORS) || DEF_COLORS);
+  render();
+
+  let uploaded = false;
+  function setStatus(t, warn) { const el = $("storeStatus"); el.textContent = t; el.classList.toggle("warn", !!warn); }
+  (async () => {
+    const C = window.claude;
+    if (!C || typeof C.use !== "function") { goLocal("· 数据保存在这个浏览器"); return; }
+    C.use("sample").then(s => { sample = s; }).catch(() => {});
+    let d = null, u = null;
+    try { [d, u] = await Promise.all([C.use("db"), C.use("user")]); } catch (e) {}
+    let uid = null; try { uid = u ? await u.id() : null; } catch (e) {}
+    if (!d || !uid) { goLocal("· 数据只保存在这个浏览器"); return; }
+    db = d; base = db.doc("data/users/" + uid + "/profile");
+    let got = false;
+    const timer = setTimeout(() => { if (!got) setStatus("· 暂时连不上云端，显示的是本地数据", true); }, 10000);
+    base.collection("sleeps").onSnapshot(snap => {
+      const next = {};
+      snap.docs.forEach(doc => { const r = clean(doc.data(), doc.id); if (r) next[doc.id] = r; });
+      if (!snap.metadata.fromCache) { clearTimeout(timer); got = true; if (db) setStatus("· 已同步到你的账号"); }
+      if (!db) return;
+      // first visit with cloud empty but this browser has records: upload them once
+      if (!snap.metadata.fromCache && snap.empty && Object.keys(records).length && !uploaded) { uploaded = true; Object.values(records).forEach(r => saveRecord(r).catch(() => {})); return; }
+      records = next; lsSet(LS, records);
+      if (!$("overlay").classList.contains("open")) render();
+    }, () => { clearTimeout(timer); if (db) setStatus("· 同步中断，显示的是本地数据", true); });
+    base.onSnapshot(snap => {
+      if (snap.exists) { const c = snap.data().colors; if (c && typeof c === "object") { setColors(c); lsSet(LSC, colors); if (!$("overlay").classList.contains("open")) render(); } }
+    }, () => {});
+  })();
+})();
+</script>
+<script src="./sync.js"></script>
+<script>if ("serviceWorker" in navigator) { navigator.serviceWorker.register("./sw.js"); }</script>
+</body>
+</html>
