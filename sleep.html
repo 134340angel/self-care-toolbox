@@ -859,20 +859,22 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 
 ${data}`;
   }
-  const emptyAI = () => `<p class="ai-empty">点「生成总结」，Claude 会读${view === "week" ? "这一周" : view === "month" ? "这个月" : "这一年"}的记录，帮你看作息规律、睡眠时长和质量的关系、梦的情况，并给出几条建议。</p>`;
+  const emptyAI = () => sample
+    ? `<p class="ai-empty">点「生成总结」，Claude 会读${view === "week" ? "这一周" : view === "month" ? "这个月" : "这一年"}的记录，帮你看作息规律、睡眠时长和质量的关系、梦的情况，并给出几条建议。</p>`
+    : `<p class="ai-empty">点「生成 AI 提示词」，会把${view === "week" ? "这一周" : view === "month" ? "这个月" : "这一年"}的睡眠记录整理成一段提示词。复制到 Claude、ChatGPT 等 AI 对话里，就能得到一份睡眠总结：作息规律、时长和质量的关系、梦的情况，还有几条小建议。（至少需要 3 晚记录）</p>`;
   async function loadSummary(range) {
     if (view === "day") return;
     const key = range.key;
     const show = c => { $("aiOut").innerHTML = mdToHtml(c.text); $("aiMeta").textContent = "上次生成于 " + new Date(c.at).toLocaleString("zh-CN", { hour12: false }) + " · 仅供参考，不是医疗建议"; $("aiBtn").textContent = "重新生成"; };
     if (summaryCache[key]) { show(summaryCache[key]); return; }
-    $("aiOut").innerHTML = emptyAI(); $("aiMeta").textContent = ""; $("aiBtn").textContent = "生成总结";
+    $("aiOut").innerHTML = emptyAI(); $("aiMeta").textContent = ""; $("aiBtn").textContent = sample ? "生成总结" : "生成 AI 提示词";
     if (db) {
       try { const snap = await base.collection("summaries").doc(key).get(); if (snap.exists && getRange().key === key) { const d = snap.data(); if (typeof d.text === "string") { summaryCache[key] = { text: d.text, at: d.at }; show(summaryCache[key]); } } } catch (e) {}
     }
   }
   function offerCopy(range, st, why) {
     const prompt = buildPrompt(range, st);
-    $("aiOut").innerHTML = `<p class="ai-empty">${esc(why)}可以复制下面这段提示词（已经包含你的睡眠数据），粘贴到 Claude 或其他 AI 对话里，就能得到同样的总结。</p>
+    $("aiOut").innerHTML = `<p class="ai-empty">${esc(why)}复制下面这段提示词（已经包含你这段时间的睡眠记录），粘贴到 Claude、ChatGPT 等 AI 对话里，就能得到一份睡眠总结。</p>
       <div class="actions" style="justify-content:flex-start;margin:8px 0"><button class="primary" id="copyPrompt">复制 AI 提示词</button><span class="note" id="copyMsg"></span></div>
       <textarea id="promptBox" readonly style="min-height:140px;font-size:12px">${esc(prompt)}</textarea>`;
     $("copyPrompt").onclick = async () => {
@@ -884,8 +886,8 @@ ${data}`;
   $("aiBtn").onclick = async () => {
     if (aiBusy) return;
     const range = getRange(), st = statsFor(range.nights), key = range.key;
-    if (st.n < 3) { $("aiOut").innerHTML = `<p class="ai-empty">这段时间的记录少于 3 晚，先多记几天再来总结吧。</p>`; return; }
-    if (!sample) { offerCopy(range, st, "这里没法直接调用 AI。"); return; }
+    if (st.n < 3) { $("aiOut").innerHTML = `<p class="ai-empty">这段时间只有 ${st.n} 晚记录，至少要 3 晚才能${sample ? "生成总结" : "生成提示词"}，先多记几天吧。</p>`; return; }
+    if (!sample) { offerCopy(range, st, ""); return; }
     aiBusy = true; $("aiBtn").disabled = true; $("aiBtn").textContent = "生成中…";
     $("aiOut").innerHTML = `<p class="ai-empty">Claude 正在读你的睡眠记录…</p>`; $("aiMeta").textContent = "";
     try {
