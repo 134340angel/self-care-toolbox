@@ -1,5 +1,5 @@
 // Self-care Toolbox service worker: keeps the tools usable offline.
-const CACHE = 'self-care-v3';
+const CACHE = 'self-care-v4';
 const SHELL = ['./', './index.html', './sleep.html', './sync.js', './manifest.json',
   './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32.png'];
 
@@ -14,8 +14,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(e.request).then(res => {
-      if (res.ok && new URL(e.request.url).origin === location.origin) {
+    // no-cache: always ask the server whether the file changed (cheap when it hasn't), instead of trusting the browser's 10-minute copy
+    (e.request.mode === 'navigate'
+      ? fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' }).then(res => res.redirected ? Response.redirect(res.url, 302) : res)
+      : fetch(e.request, { cache: 'no-cache' })
+    ).then(res => {
+      if (res.ok && res.type !== 'opaqueredirect' && res.status === 200) {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
       }

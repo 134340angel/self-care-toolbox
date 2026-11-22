@@ -51,6 +51,23 @@ footer a { color:var(--line); }
 </div>
 <footer>项目地址：<a href="https://github.com/134340angel/self-care-toolbox">github.com/134340angel/self-care-toolbox</a></footer>
 </main>
-<script>if ("serviceWorker" in navigator) { navigator.serviceWorker.register("./sw.js"); }</script>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then(reg => {
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
+}).catch(() => {});
+// A home-screen app is usually resumed, not reopened, so it can keep showing an old version.
+// When it comes back to the front, check whether this page changed on the server and reload if nothing is open.
+(() => {
+  const stamp = async () => { try { const r = await fetch(location.pathname, { method: "HEAD", cache: "no-store" }); return r.ok ? (r.headers.get("etag") || r.headers.get("last-modified")) : null; } catch (e) { return null; } };
+  let base = null; stamp().then(s => { base = s; });
+  let last = Date.now();
+  document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || Date.now() - last < 30000) return;
+    last = Date.now();
+    const s = await stamp();
+    if (s && base && s !== base && !document.querySelector(".overlay.open")) location.reload();
+  });
+})();
+</script>
 </body>
 </html>
