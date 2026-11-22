@@ -301,6 +301,11 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 .axis .sidehead { visibility: hidden; }
 /* bottom bar */
 .bottombar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--paper); border-top: 1px solid var(--rule); padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); display: grid; gap: 10px; justify-items: center; }
+.synchint { background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--line); border-radius: 0 12px 12px 0; padding: 12px 14px; display: grid; gap: 10px; font-size: 13.5px; line-height: 1.7; color: var(--muted); }
+.synchint p { margin: 0; }
+.synchint b { color: var(--ink); font-weight: 600; }
+.synchint .r { display: flex; gap: 8px; justify-content: flex-end; }
+.synchint button { font-size: 13.5px; padding: 6px 12px; }
 .bottombar .summary { font-size: 13.5px; color: var(--muted); text-align: center; line-height: 1.6; }
 .bottombar .summary b { color: var(--ink); font-weight: 600; }
 .bottombar .big { width: min(520px, 100%); height: 50px; border-radius: 14px; font-size: 16px; }
@@ -348,6 +353,11 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
       <button role="tab" data-view="year">年</button>
     </div>
     <button class="ghost" id="todayBtn">回到今天</button>
+  </div>
+
+  <div class="synchint hidden" id="syncHint" role="note">
+    <p>从主屏幕打开时，记录只保存在这个 App 里。<b>删除主屏幕图标会清空所有记录。</b>开启多端同步后，重新添加或换手机时，输入同步码就能找回。</p>
+    <div class="r"><button type="button" class="ghost" id="syncHintLater">知道了</button><button type="button" class="primary" id="syncHintGo">去开启同步</button></div>
   </div>
 
   <section class="stats" id="stats" aria-label="统计"></section>
@@ -1118,6 +1128,25 @@ ${data}`;
 })();
 </script>
 <script src="./sync.js"></script>
+<script>
+// On a home-screen app, gently point out that deleting the icon wipes its data, until sync is on.
+(() => {
+  const hint = document.getElementById("syncHint"); if (!hint) return;
+  const KEY = "sleep-sync-hint-later";
+  const standalone = window.navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+  const has = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const hasRecords = () => { try { return Object.keys(JSON.parse(has("sleep-timeline-v2") || "{}")).length > 0; } catch (e) { return false; } };
+  const snoozed = () => { const t = Number(has(KEY)); return t && Date.now() - t < 30 * 864e5; };
+  const check = () => { hint.classList.toggle("hidden", !(standalone && hasRecords() && !has("sleep-sync-code") && !snoozed())); };
+  document.getElementById("syncHintLater").onclick = () => { try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {} check(); };
+  document.getElementById("syncHintGo").onclick = () => {
+    document.getElementById("moreOverlay").classList.add("open");
+    setTimeout(() => { const c = document.getElementById("syncCard"); if (c) c.scrollIntoView({ block: "start", behavior: "smooth" }); }, 60);
+  };
+  check();
+  setInterval(() => { if (!document.hidden) check(); }, 3000);
+})();
+</script>
 <script>
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then(reg => {
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reg.update().catch(() => {}); });
