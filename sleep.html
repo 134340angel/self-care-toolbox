@@ -199,7 +199,12 @@ button:disabled { opacity: .5; cursor: default; }
 input[type="date"], input[type="time"], textarea { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 7px 9px; width: 100%; font-family: var(--font-mono); }
 textarea { font-family: var(--font-body); min-height: 70px; resize: vertical; }
 input[type="date"], input[type="time"] { display: block; box-sizing: border-box; min-width: 0; max-width: 100%; min-height: 40px; }
+.dt { position: relative; min-width: 0; }
+.dt .dtv { display: none; }
 @media (pointer: coarse) {
+  .dt input { color: transparent !important; -webkit-text-fill-color: transparent; }
+  .dt .dtv { display: flex; position: absolute; inset: 0; align-items: center; justify-content: center; pointer-events: none; font-family: var(--font-mono); font-size: 16px; color: var(--ink); }
+  .dt .dtv.empty { color: var(--muted); }
   input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; min-height: 44px; line-height: 24px; padding: 9px 10px; text-align: center; }
   input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value { text-align: center; margin: 0; min-height: 24px; line-height: 24px; }
 }
@@ -929,6 +934,21 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
     } catch (err) { $("fErr").textContent = "同步失败：" + ((err && err.message) || "请稍后再试") + "（已暂存在这个浏览器）"; render(); }
     finally { $("saveBtn").disabled = false; }
   });
+  // phones show dates in their own locale format (e.g. 2026年11月21日); draw the same 2026/11/21 and 00:40 as on a computer
+  document.querySelectorAll('#form input[type="date"], #form input[type="time"]').forEach(inp => {
+    const wrap = document.createElement("div"); wrap.className = "dt";
+    inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+    const lab = document.createElement("span"); lab.className = "dtv"; lab.setAttribute("aria-hidden", "true"); wrap.appendChild(lab);
+    const show = () => {
+      const v = inp.value;
+      lab.classList.toggle("empty", !v);
+      lab.textContent = inp.type === "date" ? (v ? v.replace(/-/g, "/") : "年/月/日") : (v ? v.slice(0, 5) : "--:--");
+    };
+    const d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+    Object.defineProperty(inp, "value", { configurable: true, get() { return d.get.call(this); }, set(x) { d.set.call(this, x); show(); } });
+    inp.addEventListener("input", show); inp.addEventListener("change", show); show();
+  });
+
   $("delBtn").onclick = async () => {
     if (!editing) return;
     if ($("delBtn").dataset.confirm !== "1") { $("delBtn").dataset.confirm = "1"; $("delBtn").textContent = "再点一次确认删除"; return; }
