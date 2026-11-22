@@ -588,7 +588,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
     if (view === "month") {
       const ym = monthOf(addDays(focus, 1));
       const [y, m] = ym.split("-").map(Number);
-      return { nights: nightsBetween(ym + "-01", lastDayOf(ym)), key: "month-" + ym, label: `${y}/${m}`, ym };
+      return { nights: nightsBetween(ym + "-01", lastDayOf(ym)), key: "month-" + ym, label: `${y}/${String(m).padStart(2, "0")}`, ym };
     }
     const y = addDays(focus, 1).slice(0, 4);
     return { nights: nightsBetween(y + "-01-01", y + "-12-31"), key: "year-" + y, label: `${y}`, year: y };
