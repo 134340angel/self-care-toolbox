@@ -19,6 +19,7 @@ body { margin:0; background:var(--paper); color:var(--ink); font-family:"PingFan
 .logo { display:block; width:112px; height:112px; border-radius:26px; margin:0 0 18px; box-shadow:0 4px 18px rgba(39,48,65,.10); }
 h1 { font-size:26px; margin:0 0 6px; }
 .sub { color:var(--muted); margin:0 0 32px; line-height:1.9; }
+.nw { white-space:nowrap; }
 .tools { display:grid; gap:14px; }
 a.tool { display:flex; gap:16px; align-items:center; text-decoration:none; color:inherit; background:var(--card); border:1px solid var(--rule); border-radius:14px; padding:18px 20px; transition:border-color .15s, box-shadow .15s; }
 a.tool:hover, a.tool:focus-visible { border-color:var(--line); box-shadow:0 0 0 3px rgba(57,166,200,.15); outline:none; }
@@ -36,7 +37,7 @@ footer a { color:var(--line); }
 <main class="wrap">
 <img class="logo" src="./icon-512.png" alt="" width="112" height="112">
 <h1>Self-care Toolbox</h1>
-<p class="sub">你好。<br>这里有一些简单的记录工具，无需注册，点击即用。<br>无论何时何处，记得照顾好自己的心。</p>
+<p class="sub">你好。<br>这里有一些简单的记录工具，<span class="nw">无需注册，点击即用。</span><br><span class="nw">无论何时何处，</span><span class="nw">记得照顾好自己的心。</span></p>
 <div class="tools">
 <a class="tool" href="./sleep.html">
 <span class="icon">🌙</span>
