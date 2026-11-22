@@ -23,10 +23,15 @@
   --rule: #e2e5e8;
   --hover: rgba(57,166,200,.10);
   --night: rgba(39,48,65,.035);
-  --line: #39a6c8;
-  --d-good: #2f6fd0;
-  --d-bad: #d2483c;
-  --d-neutral: #9aa1ab;
+  --line: #9ccfee;
+  --d-good: #aab9f5;
+  --d-bad: #f4a7b9;
+  --d-neutral: #c9cdd6;
+  --on-line: #273041;
+  --on-good: #273041;
+  --on-bad: #273041;
+  --on-neutral: #273041;
+  --line-text: #4f7f9c;
   --font-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
   --font-hand: "Caveat", "Comic Sans MS", cursive;
   --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -59,13 +64,13 @@ h1 small { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 
 button { font: inherit; color: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--rule); background: var(--card); padding: 6px 12px; transition: border-color .15s, box-shadow .15s; }
 button:hover { border-color: var(--line); box-shadow: 0 0 0 3px var(--hover); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, .seg:focus-visible, .row:focus-visible, .cell:focus-visible, .dl:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
-button.primary { background: var(--line); border-color: var(--line); color: #fff; font-weight: 600; }
+button.primary { background: var(--line); border-color: var(--line); color: var(--on-line); font-weight: 600; }
 button.ghost { background: transparent; }
 button:disabled { opacity: .5; cursor: default; }
 .tabs { display: inline-flex; border: 1px solid var(--rule); border-radius: 10px; padding: 3px; background: var(--card); gap: 2px; }
 .tabs button { border: 0; padding: 5px 14px; border-radius: 7px; background: transparent; }
 .tabs button:hover { box-shadow: none; background: var(--hover); }
-.tabs button[aria-selected="true"] { background: var(--line); color: #fff; font-weight: 600; }
+.tabs button[aria-selected="true"] { background: var(--line); color: var(--on-line); font-weight: 600; }
 .card { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; }
 .card h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
 .note { color: var(--muted); font-size: 12.5px; font-weight: 400; }
@@ -94,10 +99,10 @@ button:disabled { opacity: .5; cursor: default; }
 .row.out { opacity: .5; }
 .lcol { position: relative; }
 .dl { position: absolute; left: 0; top: 0; transform: translateY(-50%); font-family: var(--font-hand); font-size: 19px; line-height: 1; display: flex; align-items: baseline; gap: 3px; white-space: nowrap; cursor: pointer; padding: 1px 2px; border-radius: 4px; z-index: 1; }
-.dl:hover { color: var(--line); }
+.dl:hover { color: var(--line-text); }
 .dl i { font-style: normal; font-family: var(--font-body); font-size: 10px; color: var(--muted); }
 .dl.we { color: var(--muted); }
-.dl.today { color: var(--line); font-weight: 700; }
+.dl.today { color: var(--line-text); font-weight: 700; }
 .dl.end { position: relative; transform: none; margin-top: -10px; display: inline-flex; }
 .brace { position: absolute; right: 8px; top: 7px; bottom: 7px; width: 7px; border: 1.5px solid var(--rule); border-left: 0; border-radius: 0 8px 8px 0; transition: border-color .15s; }
 .track { position: relative;
@@ -145,7 +150,7 @@ button:disabled { opacity: .5; cursor: default; }
 .rec .t { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .rec .t b { font-weight: 500; }
 .rec .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13.5px; color: var(--muted); align-items: center; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 12.5px; color: #fff; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 12.5px; color: var(--ink); }
 .rec .dream { font-size: 14px; white-space: pre-wrap; }
 .rec .nt { font-size: 13px; color: var(--muted); white-space: pre-wrap; }
 
@@ -189,10 +194,10 @@ textarea { font-family: var(--font-body); min-height: 70px; resize: vertical; }
 .durline b { color: var(--ink); font-family: var(--font-mono); font-weight: 500; }
 .choices { display: flex; flex-wrap: wrap; gap: 6px; }
 .choices button { padding: 5px 11px; font-size: 13.5px; }
-.choices button[aria-pressed="true"] { background: var(--line); border-color: var(--line); color: #fff; }
-.choices.mood button[data-v="good"][aria-pressed="true"] { background: var(--d-good); border-color: var(--d-good); }
-.choices.mood button[data-v="bad"][aria-pressed="true"] { background: var(--d-bad); border-color: var(--d-bad); }
-.choices.mood button[data-v="neutral"][aria-pressed="true"] { background: var(--d-neutral); border-color: var(--d-neutral); }
+.choices button[aria-pressed="true"] { background: var(--line); border-color: var(--line); color: var(--on-line); }
+.choices.mood button[data-v="good"][aria-pressed="true"] { background: var(--d-good); border-color: var(--d-good); color: var(--on-good); }
+.choices.mood button[data-v="bad"][aria-pressed="true"] { background: var(--d-bad); border-color: var(--d-bad); color: var(--on-bad); }
+.choices.mood button[data-v="neutral"][aria-pressed="true"] { background: var(--d-neutral); border-color: var(--d-neutral); color: var(--on-neutral); }
 .actions { display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
 .actions .r { display: flex; gap: 8px; }
 .danger { color: var(--d-bad); }
@@ -209,7 +214,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 .toggle input { width: 16px; height: 16px; accent-color: var(--line); }
 @media (max-width: 480px) { .trio { grid-template-columns: 1fr 1fr; } .trio .field:first-child { grid-column: 1 / -1; } .nav .lbl { min-width: 110px; } }
 .home { justify-self: start; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: -8px; padding: 4px 0; }
-.home:hover { color: var(--line); }
+.home:hover { color: var(--line-text); }
 /* phone layout */
 .wrap { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 600px) {
@@ -398,7 +403,8 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
   let view = "month";
   let focus = currentNight();
   let editing = null;
-  const DEF_COLORS = { line: "#39a6c8", good: "#2f6fd0", bad: "#d2483c", neutral: "#9aa1ab", byDream: false };
+  const DEF_COLORS = { line: "#9ccfee", good: "#aab9f5", bad: "#f4a7b9", neutral: "#c9cdd6", byDream: false };
+  const OLD_DEF = { line: "#39a6c8", good: "#2f6fd0", bad: "#d2483c", neutral: "#9aa1ab" };
   let colors = { ...DEF_COLORS };
 
   function lsGet(k, fb) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? fb : v; } catch (e) { return fb; } }
@@ -445,10 +451,10 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
 
   // ================= colors =================
   const PRESETS = {
-    line: ["#39a6c8", "#2f6fd0", "#5b8def", "#7c6fd6", "#3f9d7a", "#e08a3c", "#e06a8f", "#4a5568"],
-    good: ["#2f6fd0", "#39a6c8", "#5b8def", "#3f9d7a"],
-    bad: ["#d2483c", "#e06a8f", "#b5462f", "#e08a3c"],
-    neutral: ["#9aa1ab", "#7a8494", "#b8bec7", "#8f8a80"]
+    line: ["#9ccfee", "#b7c8f6", "#cdbdf2", "#f5bcd3", "#a9ded3", "#f6d9ad", "#dccdea", "#bcc7d4"],
+    good: ["#aab9f5", "#9ccfee", "#a9ded3", "#cdbdf2"],
+    bad: ["#f4a7b9", "#f5bcd3", "#f2b8a2", "#e7aacb"],
+    neutral: ["#c9cdd6", "#d6d1e2", "#dad4c8", "#bfc7d5"]
   };
   const CNAME = { line: "", good: "好梦", bad: "噩梦", neutral: "普通的梦" };
   const okHex = v => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
@@ -456,9 +462,18 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
     const r = document.documentElement.style;
     r.setProperty("--line", colors.line); r.setProperty("--d-good", colors.good); r.setProperty("--d-bad", colors.bad); r.setProperty("--d-neutral", colors.neutral);
     const h = colors.line; const n = parseInt(h.slice(1), 16);
-    r.setProperty("--hover", `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},.11)`);
+    r.setProperty("--hover", `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},.16)`);
+    // text on a colored background: dark on light colors, white on dark ones
+    const lum = hx => { const v = parseInt(hx.slice(1), 16); const f = c => { c /= 255; return c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4); }; return .2126 * f(v >> 16) + .7152 * f((v >> 8) & 255) + .0722 * f(v & 255); };
+    const on = hx => lum(hx) > .36 ? "#273041" : "#ffffff";
+    r.setProperty("--on-line", on(colors.line)); r.setProperty("--on-good", on(colors.good)); r.setProperty("--on-bad", on(colors.bad)); r.setProperty("--on-neutral", on(colors.neutral));
+    // readable text version of the line color, for dates and links on the page background
+    const mix = (a, b, t) => { const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16); const ch = s => Math.round(((x >> s) & 255) * (1 - t) + ((y >> s) & 255) * t); return "#" + [16, 8, 0].map(s => ch(s).toString(16).padStart(2, "0")).join(""); };
+    r.setProperty("--line-text", lum(colors.line) > .36 ? mix(colors.line, "#273041", .5) : colors.line);
   }
   function setColors(c) {
+    // anyone still on the old default palette moves to the new pastel defaults
+    if (c && c.line === OLD_DEF.line && c.good === OLD_DEF.good && c.bad === OLD_DEF.bad && c.neutral === OLD_DEF.neutral) c = { ...c, line: DEF_COLORS.line, good: DEF_COLORS.good, bad: DEF_COLORS.bad, neutral: DEF_COLORS.neutral };
     colors = { line: okHex(c.line) ? c.line : DEF_COLORS.line, good: okHex(c.good) ? c.good : DEF_COLORS.good, bad: okHex(c.bad) ? c.bad : DEF_COLORS.bad, neutral: okHex(c.neutral) ? c.neutral : DEF_COLORS.neutral, byDream: !!c.byDream };
     applyColors();
   }
@@ -647,7 +662,7 @@ input[type="color"] { width: 32px; height: 26px; padding: 0; border: 1px solid v
         const { s, e } = span(r);
         const chips = [];
         if (r.quality) chips.push(`<span>质量 <b style="color:var(--ink)">${r.quality}</b>/5</span>`);
-        if (r.dream === "yes") chips.push(`<span class="chip" style="background:${moodVar(r.mood)}">${MOOD[r.mood] || "做了梦"}</span>`);
+        if (r.dream === "yes") chips.push(`<span class="chip" style="background:${moodVar(r.mood)};color:var(--on-${r.mood === "good" || r.mood === "bad" ? r.mood : "neutral"})">${MOOD[r.mood] || "做了梦"}</span>`);
         else if (r.dream === "no") chips.push("<span>没做梦</span>"); else if (r.dream === "unsure") chips.push("<span>不记得有没有做梦</span>");
         return `<div class="rec" data-id="${esc(r.id)}" tabindex="0" role="button" style="border-left-color:${segColor(r)}">
           <div class="t">${md(idxStr(Math.floor(s / DAY)))} <b>${r.bed}</b> 入睡 → ${md(idxStr(Math.floor(e / DAY)))} <b>${r.up}</b> 起床 · ${fmtLong(e - s)}</div>
